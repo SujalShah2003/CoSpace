@@ -1,0 +1,11 @@
+.overviewLink {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--mantine-spacing-xs);
+  transition: color 160ms ease;
+}
+
+.overviewLink:hover {
+  color: var(--mantine-color-teal-6);
+  text-decoration: none;
+}

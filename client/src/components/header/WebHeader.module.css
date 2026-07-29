@@ -1,0 +1,29 @@
+.navLink {
+  position: relative;
+  text-decoration: none;
+}
+
+.navLink::after {
+  position: absolute;
+  right: var(--mantine-spacing-md);
+  bottom: 4px;
+  left: var(--mantine-spacing-md);
+  height: 2px;
+  background: var(--mantine-color-teal-6);
+  border-radius: var(--mantine-radius-xl);
+  content: '';
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 220ms ease;
+}
+
+.navLink:hover::after,
+.navLink:focus-visible::after {
+  transform: scaleX(1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .navLink::after {
+    transition: none;
+  }
+}

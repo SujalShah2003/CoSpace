@@ -1,0 +1,21 @@
+.navButton {
+  color: var(--mantine-color-gray-4);
+  transition:
+    color 160ms ease,
+    background-color 160ms ease;
+}
+
+.navButton:hover {
+  color: var(--mantine-color-white);
+  background-color: var(--mantine-color-dark-6);
+}
+
+.activeNav {
+  color: var(--mantine-color-white);
+  background-color: var(--mantine-color-teal-6);
+}
+
+.activeNav:hover {
+  color: var(--mantine-color-white);
+  background-color: var(--mantine-color-teal-7);
+}
