@@ -2,24 +2,30 @@ import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import AmenitiesSection from '@/components/home/AmenitiesSection';
 import AvailabilitySection from '@/components/home/AvailabilitySection';
-import BookingModal from '@/components/home/BookingModal';
 import CallToActionSection from '@/components/home/CallToActionSection';
 import HeroSection from '@/components/home/HeroSection';
 import SpaceDetailsModal from '@/components/home/SpaceDetailsModal';
 import SpacesSection from '@/components/home/SpacesSection';
-import { spaces, type Space } from '@/components/home/data.temp';
+import type { Space } from '@/components/home/data.temp';
+import { useSpaces } from '@/hooks/useSpaces';
 import { isAuthenticated } from '@/utils/auth';
 
 const HomePage = () => {
   const navigate = useNavigate();
+  const {
+    spaces,
+    hasMore,
+    loadMore,
+    loadingMore,
+  } = useSpaces(true, 6);
   const [query, setQuery] = useState('');
   const [spaceType, setSpaceType] = useState<string | null>('All spaces');
   const [capacity, setCapacity] = useState<number | string>(1);
   const [selectedSpace, setSelectedSpace] = useState<Space | null>(null);
-  const [bookingSpace, setBookingSpace] = useState<Space | null>(null);
 
   const filteredSpaces = useMemo(
     () => spaces.filter((space) => {
+      if (space.status === 'unavailable') return false;
       const matchesQuery = `${space.name} ${space.type}`
         .toLowerCase()
         .includes(query.toLowerCase());
@@ -28,7 +34,7 @@ const HomePage = () => {
 
       return matchesQuery && matchesType && space.capacity >= requestedCapacity;
     }),
-    [capacity, query, spaceType],
+    [capacity, query, spaceType, spaces],
   );
 
   const showSpaces = () => {
@@ -47,7 +53,7 @@ const HomePage = () => {
       return;
     }
 
-    setBookingSpace(space);
+    navigate(`/admin/bookings/new?space=${space.id}`);
   };
 
   return (
@@ -66,19 +72,17 @@ const HomePage = () => {
         onClearFilters={clearFilters}
         onViewDetails={setSelectedSpace}
         onBook={handleBook}
+        hasMore={hasMore}
+        loadingMore={loadingMore}
+        onLoadMore={() => void loadMore()}
       />
-      <AvailabilitySection />
+      <AvailabilitySection spaces={spaces} />
       <AmenitiesSection />
       <CallToActionSection onShowSpaces={showSpaces} />
       <SpaceDetailsModal
         space={selectedSpace}
         opened={selectedSpace !== null}
         onClose={() => setSelectedSpace(null)}
-      />
-      <BookingModal
-        space={bookingSpace}
-        opened={bookingSpace !== null}
-        onClose={() => setBookingSpace(null)}
       />
     </>
   );

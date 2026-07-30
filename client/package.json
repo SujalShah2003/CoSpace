@@ -16,6 +16,7 @@
     "@mantine/hooks": "^9.5.0",
     "@mantine/modals": "^9.5.0",
     "@mantine/notifications": "^9.5.0",
+    "axios": "^1.11.0",
     "dayjs": "^1.11.21",
     "path": "^0.12.7",
     "react": "^19.2.7",

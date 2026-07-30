@@ -16,14 +16,14 @@ import {
 } from '@mantine/core';
 import {
   FiCalendar,
-  FiCheck,
   FiCheckCircle,
   FiClock,
   FiGrid,
-  FiX,
 } from 'react-icons/fi';
 import { useBookingRequests } from '@/hooks/useBookingRequests';
 import AdminBreadcrumbs from '@/components/admin/common/AdminBreadcrumbs';
+import { Link, Navigate } from 'react-router-dom';
+import { getCurrentUser } from '@/utils/auth';
 
 const statusColors = {
   pending: 'blue',
@@ -33,7 +33,11 @@ const statusColors = {
 };
 
 const AdminDashboardPage = () => {
-  const { requests, updateStatus } = useBookingRequests();
+  const user = getCurrentUser();
+  const { requests } = useBookingRequests();
+  if (user?.role !== 'admin') {
+    return <Navigate to="/admin/bookings" replace />;
+  }
   const pendingCount = requests.filter((request) => request.status === 'pending').length;
   const approvedCount = requests.filter((request) => request.status === 'approved').length;
   const stats = [
@@ -148,25 +152,15 @@ const AdminDashboardPage = () => {
                           </Table.Td>
                           <Table.Td>
                             {request.status === 'pending' ? (
-                              <Group gap="xs" wrap="nowrap">
-                                <Button
-                                  size="xs"
-                                  color="green"
-                                  leftSection={<FiCheck />}
-                                  onClick={() => updateStatus(request.id, 'approved')}
-                                >
-                                  Approve
-                                </Button>
-                                <Button
-                                  size="xs"
-                                  color="red"
-                                  variant="light"
-                                  leftSection={<FiX />}
-                                  onClick={() => updateStatus(request.id, 'rejected')}
-                                >
-                                  Reject
-                                </Button>
-                              </Group>
+                              <Button
+                                component={Link}
+                                to="/admin/booking-requests"
+                                size="xs"
+                                color="teal"
+                                variant="light"
+                              >
+                                Review request
+                              </Button>
                             ) : (
                               <Text size="xs" c="dimmed">Reviewed</Text>
                             )}

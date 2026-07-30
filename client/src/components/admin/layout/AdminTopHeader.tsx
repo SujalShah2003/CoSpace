@@ -25,7 +25,7 @@ const AdminTopHeader = ({ user, onLogout }: AdminTopHeaderProps) => {
   return (
     <Group justify="space-between" w="100%" wrap="nowrap">
       <Text fw={800} fz={{ base: 'lg', sm: 'xl' }} lineClamp={1}>
-        CoSpace Administration
+        {user?.role === 'admin' ? 'CoSpace Administration' : 'CoSpace Member Portal'}
       </Text>
 
       <Group gap="md" wrap="nowrap">

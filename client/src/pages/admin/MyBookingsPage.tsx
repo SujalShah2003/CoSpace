@@ -54,12 +54,12 @@ const MyBookingsPage = () => {
     [requests, user?.email, user?.name],
   );
 
-  const confirmCancellation = () => {
+  const confirmCancellation = async () => {
     if (!bookingToCancel || !canCancelBooking(bookingToCancel)) {
       return;
     }
 
-    updateStatus(bookingToCancel.id, 'cancelled');
+    await updateStatus(bookingToCancel.id, 'cancelled');
     setBookingToCancel(null);
   };
 

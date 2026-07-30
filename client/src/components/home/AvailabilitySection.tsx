@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Badge,
   Box,
@@ -16,6 +16,9 @@ import {
 } from '@mantine/core';
 import { DatePicker } from '@mantine/dates';
 import { FiCalendar, FiCheckCircle, FiClock, FiLock, FiRefreshCw } from 'react-icons/fi';
+import dayjs from 'dayjs';
+import type { Space } from './data.temp';
+import { getAvailableSlots, type BookingSlot } from '@/services/spaces.api';
 
 const allSlots = [
   '08:00 AM – 10:00 AM',
@@ -26,13 +29,21 @@ const allSlots = [
   '06:00 PM – 08:00 PM',
 ];
 
-const AvailabilitySection = () => {
-  const [selectedDate, setSelectedDate] = useState<Date | string | null>(new Date());
+type AvailabilitySectionProps = { spaces: Space[] };
 
-  const availableSlots = useMemo(() => {
-    const day = selectedDate ? new Date(selectedDate).getDay() : 0;
-    return allSlots.filter((_, index) => (index + day) % 4 !== 0);
-  }, [selectedDate]);
+const AvailabilitySection = ({ spaces }: AvailabilitySectionProps) => {
+  const [selectedDate, setSelectedDate] = useState<Date | string | null>(new Date());
+  const [slots, setSlots] = useState<BookingSlot[]>([]);
+
+  useEffect(() => {
+    const firstSpace = spaces[0];
+    if (!firstSpace) return;
+    void getAvailableSlots(
+      firstSpace.id,
+      dayjs(selectedDate).format('YYYY-MM-DD'),
+      true,
+    ).then(setSlots);
+  }, [selectedDate, spaces]);
 
   return (
     <Box
@@ -116,7 +127,9 @@ const AvailabilitySection = () => {
                     <ScrollArea.Autosize mah={230} type="auto" offsetScrollbars scrollbarSize={6}>
                       <SimpleGrid cols={1} spacing="xs">
                         {allSlots.map((slot) => {
-                          const isAvailable = availableSlots.includes(slot);
+                          const isAvailable =
+                            slots.find((item) => item.label === slot)?.status ===
+                            'available';
                           return (
                             <Button
                               key={slot}

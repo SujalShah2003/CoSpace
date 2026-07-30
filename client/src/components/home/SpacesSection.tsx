@@ -24,6 +24,9 @@ type SpacesSectionProps = {
   onClearFilters: () => void;
   onViewDetails: (space: Space) => void;
   onBook: (space: Space) => void;
+  hasMore: boolean;
+  loadingMore: boolean;
+  onLoadMore: () => void;
 };
 
 const SpacesSection = ({
@@ -31,6 +34,9 @@ const SpacesSection = ({
   onClearFilters,
   onViewDetails,
   onBook,
+  hasMore,
+  loadingMore,
+  onLoadMore,
 }: SpacesSectionProps) => (
   <Box component="section" id="spaces" py={{ base: 64, sm: 96 }}>
     <Container size="xl">
@@ -44,16 +50,17 @@ const SpacesSection = ({
       </Group>
 
       {spaces.length > 0 ? (
-        <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }} spacing="xl">
-          {spaces.map((space) => (
-            <Card
-              key={space.name}
-              withBorder
-              radius="lg"
-              padding={0}
-              shadow="sm"
-              style={{ display: 'flex', flexDirection: 'column' }}
-            >
+        <Stack gap="xl">
+          <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }} spacing="xl">
+            {spaces.map((space) => (
+              <Card
+                key={space.name}
+                withBorder
+                radius="lg"
+                padding={0}
+                shadow="sm"
+                style={{ display: 'flex', flexDirection: 'column' }}
+              >
               <Card.Section pos="relative">
                 <Image src={space.image} alt={space.name} h={230} fit="cover" />
                 <Badge pos="absolute" top={16} left={16} color="dark" variant="filled">
@@ -101,9 +108,23 @@ const SpacesSection = ({
                   </Button>
                 </SimpleGrid>
               </Stack>
-            </Card>
-          ))}
-        </SimpleGrid>
+              </Card>
+            ))}
+          </SimpleGrid>
+          {hasMore && (
+            <Group justify="center">
+              <Button
+                color="teal"
+                variant="light"
+                size="md"
+                loading={loadingMore}
+                onClick={onLoadMore}
+              >
+                Load more spaces
+              </Button>
+            </Group>
+          )}
+        </Stack>
       ) : (
         <Paper withBorder radius="lg" p={50}>
           <Center>

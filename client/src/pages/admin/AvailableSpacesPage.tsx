@@ -32,9 +32,17 @@ import SpaceDetailsModal from "@/components/home/SpaceDetailsModal";
 import AppModal from "@/components/modal/AppModal";
 import type { Space } from "@/components/home/data.temp";
 import { useSpaces } from "@/hooks/useSpaces";
+import { getCurrentUser } from "@/utils/auth";
 
 const AvailableSpacesPage = () => {
-  const { spaces, deleteSpace } = useSpaces();
+  const {
+    spaces,
+    deleteSpace,
+    hasMore,
+    loadMore,
+    loadingMore,
+  } = useSpaces(false, 6);
+  const isAdmin = getCurrentUser()?.role === "admin";
   const [selectedSpace, setSelectedSpace] = useState<Space | null>(null);
   const [spaceToDelete, setSpaceToDelete] = useState<Space | null>(null);
   const [confirmationText, setConfirmationText] = useState("");
@@ -47,12 +55,12 @@ const AvailableSpacesPage = () => {
     setConfirmationText("");
   };
 
-  const confirmDelete = () => {
+  const confirmDelete = async () => {
     if (!spaceToDelete || confirmationText.trim() !== requiredConfirmation) {
       return;
     }
 
-    deleteSpace(spaceToDelete.id);
+    await deleteSpace(spaceToDelete.id);
     closeDeleteModal();
   };
 
@@ -69,15 +77,17 @@ const AvailableSpacesPage = () => {
             slot.
           </Text>
         </Stack>
-        <Button
-          size="md"
-          component={Link}
-          to="/admin/spaces/new"
-          color="teal"
-          leftSection={<FiPlus />}
-        >
-          Add space
-        </Button>
+        {isAdmin && (
+          <Button
+            size="md"
+            component={Link}
+            to="/admin/spaces/new"
+            color="teal"
+            leftSection={<FiPlus />}
+          >
+            Add space
+          </Button>
+        )}
       </Group>
 
       <SimpleGrid cols={{ base: 1, md: 2, xl: 3 }} spacing="xl">
@@ -131,16 +141,26 @@ const AvailableSpacesPage = () => {
               </Group>
 
               <Group gap="sm" mt="auto" wrap="nowrap">
-                <Button
-                  component={Link}
-                  to={`/admin/bookings/new?space=${space.id}`}
-                  color="teal"
-                  leftSection={<FiCalendar />}
-                  disabled={space.status === "unavailable"}
-                  style={{ flex: 1 }}
-                >
-                  Book now
-                </Button>
+                {space.status === "unavailable" ? (
+                  <Button
+                    color="teal"
+                    leftSection={<FiCalendar />}
+                    disabled
+                    style={{ flex: 1 }}
+                  >
+                    Book now
+                  </Button>
+                ) : (
+                  <Button
+                    component={Link}
+                    to={`/admin/bookings/new?space=${space.id}`}
+                    color="teal"
+                    leftSection={<FiCalendar />}
+                    style={{ flex: 1 }}
+                  >
+                    Book now
+                  </Button>
+                )}
                 <Tooltip label="View space" withArrow>
                   <ActionIcon
                     variant="default"
@@ -151,7 +171,7 @@ const AvailableSpacesPage = () => {
                     <FiEye />
                   </ActionIcon>
                 </Tooltip>
-                <Tooltip label="Edit space" withArrow>
+                {isAdmin && <Tooltip label="Edit space" withArrow>
                   <ActionIcon
                     component={Link}
                     to={`/admin/spaces/${space.id}/edit`}
@@ -161,8 +181,8 @@ const AvailableSpacesPage = () => {
                   >
                     <FiEdit2 />
                   </ActionIcon>
-                </Tooltip>
-                <Tooltip label="Delete space" withArrow>
+                </Tooltip>}
+                {isAdmin && <Tooltip label="Delete space" withArrow>
                   <ActionIcon
                     variant="light"
                     color="red"
@@ -172,12 +192,26 @@ const AvailableSpacesPage = () => {
                   >
                     <FiTrash2 />
                   </ActionIcon>
-                </Tooltip>
+                </Tooltip>}
               </Group>
             </Stack>
           </Card>
         ))}
       </SimpleGrid>
+
+      {hasMore && (
+        <Group justify="center">
+          <Button
+            color="teal"
+            variant="light"
+            size="md"
+            loading={loadingMore}
+            onClick={() => void loadMore()}
+          >
+            Load more spaces
+          </Button>
+        </Group>
+      )}
 
       <SpaceDetailsModal
         space={selectedSpace}

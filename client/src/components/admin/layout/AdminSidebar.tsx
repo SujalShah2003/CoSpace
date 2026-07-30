@@ -14,6 +14,7 @@ import {
   FiCalendar,
   FiClipboard,
   FiGrid,
+  FiInbox,
   FiLayers,
   FiLogOut,
 } from 'react-icons/fi';
@@ -22,10 +23,21 @@ import Logo from '@/common/Logo';
 import type { AuthUser } from '@/utils/auth';
 import styles from './AdminSidebar.module.css';
 
-const adminLinks = [
+const navigationLinks = [
   { label: 'Overview', icon: <FiGrid />, to: '/admin' },
   { label: 'Available spaces', icon: <FiCalendar />, to: '/admin/bookings' },
-  { label: 'My bookings', icon: <FiClipboard />, to: '/admin/my-bookings' },
+  {
+    label: 'My bookings',
+    icon: <FiClipboard />,
+    to: '/admin/my-bookings',
+    memberOnly: true,
+  },
+  {
+    label: 'Manage bookings',
+    icon: <FiInbox />,
+    to: '/admin/booking-requests',
+    adminOnly: true,
+  },
 ];
 
 type AdminSidebarProps = {
@@ -43,6 +55,10 @@ const AdminSidebar = ({
 }: AdminSidebarProps) => {
   const location = useLocation();
   const userInitial = user?.name.charAt(0).toUpperCase() || 'A';
+  const links =
+    user?.role === 'admin'
+      ? navigationLinks.filter((link) => !link.memberOnly)
+      : navigationLinks.filter((link) => !link.adminOnly);
 
   return (
     <Stack h="100%" justify="space-between" p={opened ? 'md' : 'xs'}>
@@ -65,7 +81,7 @@ const AdminSidebar = ({
               MAIN
             </Text>
           )}
-          {adminLinks.map((link) => {
+          {links.map((link) => {
             const isActive =
               link.to === '/admin'
                 ? location.pathname === link.to
@@ -130,7 +146,9 @@ const AdminSidebar = ({
                 <Box style={{ minWidth: 0 }}>
                   <Text fw={700} size="sm" c="white" truncate>{user?.name}</Text>
                   <Text c="gray.5" size="xs" truncate>{user?.email}</Text>
-                  <Text c="teal.3" size="xs" fw={600}>Administrator</Text>
+                  <Text c="teal.3" size="xs" fw={600}>
+                    {user?.role === 'admin' ? 'Administrator' : 'Member'}
+                  </Text>
                 </Box>
               </Group>
             </Paper>

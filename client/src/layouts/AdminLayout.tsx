@@ -5,7 +5,12 @@ import { Outlet, useNavigate } from 'react-router-dom';
 import AdminFooter from '@/components/admin/layout/AdminFooter';
 import AdminSidebar from '@/components/admin/layout/AdminSidebar';
 import AdminTopHeader from '@/components/admin/layout/AdminTopHeader';
-import { clearSession, getCurrentUser } from '@/utils/auth';
+import {
+  clearSession,
+  getCurrentUser,
+  getRefreshToken,
+} from '@/utils/auth';
+import { logout as logoutRequest } from '@/services/auth.api';
 
 const layoutTokens = {
   headerHeight: 76,
@@ -56,9 +61,14 @@ const AdminLayout = () => {
     openDesktop();
   }, [closeDesktop, isMobile, openDesktop, shouldAutoCollapseDesktop]);
 
-  const logout = () => {
-    clearSession();
-    navigate('/', { replace: true });
+  const logout = async () => {
+    const refreshToken = getRefreshToken();
+    try {
+      if (refreshToken) await logoutRequest(refreshToken);
+    } finally {
+      clearSession();
+      navigate('/', { replace: true });
+    }
   };
 
   const toggleNavigation = () => {

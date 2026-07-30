@@ -2,11 +2,12 @@ import { createBrowserRouter } from 'react-router-dom';
 import MasterLayout from '@/layouts/MasterLayout';
 import AuthLayout from '@/layouts/AuthLayout';
 import ProtectedAdminLayout from '@/layouts/ProtectedAdminLayout';
-import AdminDashboardPage from '@/pages/admin/AdminDashboardPage';
+import DashboardPage from '@/pages/admin/DashboardPage';
 import AvailableSpacesPage from '@/pages/admin/AvailableSpacesPage';
 import BookNowPage from '@/pages/admin/BookNowPage';
 import MyBookingsPage from '@/pages/admin/MyBookingsPage';
 import SpaceFormPage from '@/pages/admin/SpaceFormPage';
+import BookingRequestsPage from '@/pages/admin/BookingRequestsPage';
 import SignInPage from '@/pages/auth/SignInPage';
 import SignUpPage from '@/pages/auth/SignUpPage';
 import HomePage from '@/pages/home/HomePage';
@@ -32,7 +33,7 @@ export const routes = createBrowserRouter(
       children: [
         {
           index: true,
-          Component: AdminDashboardPage,
+          Component: DashboardPage,
         },
         {
           path: 'bookings',
@@ -45,6 +46,10 @@ export const routes = createBrowserRouter(
         {
           path: 'my-bookings',
           Component: MyBookingsPage,
+        },
+        {
+          path: 'booking-requests',
+          Component: BookingRequestsPage,
         },
         {
           path: 'spaces/new',

@@ -1,39 +1,70 @@
 import { useCallback, useEffect, useState } from 'react';
 import {
-  BOOKING_REQUESTS_CHANGED,
-  createBookingRequest,
+  cancelBooking,
   getBookingRequests,
-  updateBookingRequestStatus,
-  type BookingStatus,
-  type NewBookingRequest,
-} from '@/utils/bookingRequests';
+  getMyBookings,
+  requestBooking,
+  reviewBooking,
+  type BookingInput,
+  type BookingRequest,
+} from '@/services/bookings.api';
+import { getCurrentUser } from '@/utils/auth';
+import type { PaginationMeta } from '@/services/apiClient';
 
-export const useBookingRequests = () => {
-  const [requests, setRequests] = useState(getBookingRequests);
+type BookingRequestOptions = { page?: number; pageSize?: number };
 
-  const refresh = useCallback(() => {
-    setRequests(getBookingRequests());
-  }, []);
+export const useBookingRequests = ({
+  page = 1,
+  pageSize = 100,
+}: BookingRequestOptions = {}) => {
+  const [requests, setRequests] = useState<BookingRequest[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [pagination, setPagination] = useState<PaginationMeta | null>(null);
+
+  const refresh = useCallback(async () => {
+    setLoading(true);
+    try {
+      const values =
+        getCurrentUser()?.role === 'admin'
+          ? await getBookingRequests(page, pageSize)
+          : await getMyBookings(page, pageSize);
+      setRequests(values.records);
+      setPagination(values.pagination);
+    } finally {
+      setLoading(false);
+    }
+  }, [page, pageSize]);
 
   useEffect(() => {
-    window.addEventListener(BOOKING_REQUESTS_CHANGED, refresh);
-    window.addEventListener('storage', refresh);
-
-    return () => {
-      window.removeEventListener(BOOKING_REQUESTS_CHANGED, refresh);
-      window.removeEventListener('storage', refresh);
-    };
+    const timer = window.setTimeout(() => void refresh(), 0);
+    return () => window.clearTimeout(timer);
   }, [refresh]);
 
-  const createRequest = (values: NewBookingRequest) =>
-    createBookingRequest(values);
+  const createRequest = async (values: BookingInput) => {
+    const created = await requestBooking(values);
+    setRequests((current) => [...current, created]);
+    return created;
+  };
 
-  const updateStatus = (requestId: string, status: BookingStatus) => {
-    updateBookingRequestStatus(requestId, status);
+  const updateStatus = async (
+    requestId: string,
+    status: 'approved' | 'rejected' | 'cancelled',
+  ) => {
+    const updated =
+      status === 'cancelled'
+        ? await cancelBooking(requestId)
+        : await reviewBooking(requestId, status);
+    setRequests((current) =>
+      current.map((request) => (request.id === requestId ? updated : request)),
+    );
+    return updated;
   };
 
   return {
     requests,
+    pagination,
+    loading,
+    refresh,
     createRequest,
     updateStatus,
   };

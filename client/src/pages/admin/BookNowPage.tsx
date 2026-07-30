@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   ActionIcon,
   Alert,
@@ -32,17 +32,8 @@ import AppModal from '@/components/modal/AppModal';
 import AdminBreadcrumbs from '@/components/admin/common/AdminBreadcrumbs';
 import { useBookingRequests } from '@/hooks/useBookingRequests';
 import { useSpaces } from '@/hooks/useSpaces';
-import { getCurrentUser } from '@/utils/auth';
-import type { BookingStatus } from '@/utils/bookingRequests';
-
-const slots = [
-  '08:00 AM – 10:00 AM',
-  '10:00 AM – 12:00 PM',
-  '12:00 PM – 02:00 PM',
-  '02:00 PM – 04:00 PM',
-  '04:00 PM – 06:00 PM',
-  '06:00 PM – 08:00 PM',
-];
+import { getAvailableSlots, type BookingSlot } from '@/services/spaces.api';
+import { getApiError } from '@/services/apiClient';
 
 const statusConfig = {
   available: { label: 'Available', color: 'green', icon: <FiCheckCircle /> },
@@ -53,66 +44,59 @@ const statusConfig = {
 
 const BookNowPage = () => {
   const { spaces } = useSpaces();
+  const availableSpaces = spaces.filter(
+    (item) => item.status !== 'unavailable',
+  );
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
   const requestedSpaceId = searchParams.get('space');
   const [selectedSpaceId, setSelectedSpaceId] = useState<string | null>(
-    spaces.some((item) => item.id === requestedSpaceId)
+    availableSpaces.some((item) => item.id === requestedSpaceId)
       ? requestedSpaceId
       : null,
   );
-  const space = spaces.find((item) => item.id === selectedSpaceId);
+  const effectiveSpaceId =
+    selectedSpaceId ||
+    (availableSpaces.some((item) => item.id === requestedSpaceId)
+      ? requestedSpaceId
+      : null);
+  const space = availableSpaces.find((item) => item.id === effectiveSpaceId);
   const [selectedDate, setSelectedDate] = useState<Date | string | null>(new Date());
   const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
   const [requestError, setRequestError] = useState<string | null>(null);
-  const { requests, createRequest } = useBookingRequests();
-  const user = getCurrentUser();
+  const { createRequest } = useBookingRequests();
+  const [apiSlots, setApiSlots] = useState<BookingSlot[]>([]);
   const dateKey = dayjs(selectedDate).format('YYYY-MM-DD');
 
-  const requestsBySlot = useMemo(
-    () =>
-      new Map(
-        requests
-          .filter(
-            (request) =>
-              request.spaceId === selectedSpaceId &&
-              request.date === dateKey &&
-              request.status !== 'cancelled',
-          )
-          .map((request) => [request.slot, request]),
-      ),
-    [dateKey, requests, selectedSpaceId],
-  );
+  useEffect(() => {
+    if (!effectiveSpaceId) return;
+    void getAvailableSlots(effectiveSpaceId, dateKey)
+      .then(setApiSlots)
+      .catch((error) =>
+        setRequestError(getApiError(error, 'Unable to load available slots.')),
+      );
+  }, [dateKey, effectiveSpaceId]);
 
-  const confirmRequest = () => {
+  const confirmRequest = async () => {
     if (!selectedSlot || !space) {
       return;
     }
 
-    const [startTime = '', endTime = ''] = selectedSlot.split(
-      /\s+(?:–|-)\s+/,
-    );
+    const slot = apiSlots.find((item) => item.label === selectedSlot);
+    if (!slot) return;
 
     try {
-      createRequest({
+      await createRequest({
         spaceId: space.id,
-        spaceName: space.name,
         date: dateKey,
-        slot: selectedSlot,
-        startTime,
-        endTime,
-        requestedBy: user?.name || 'Workspace user',
-        requestedByEmail: user?.email || '',
+        startTime: slot.startTime,
+        endTime: slot.endTime,
       });
       setRequestError(null);
       setSelectedSlot(null);
       navigate('/admin/my-bookings');
     } catch (error) {
-      setRequestError(
-        error instanceof Error
-          ? error.message
-          : 'This time is no longer available.',
-      );
+      setRequestError(getApiError(error, 'This time is no longer available.'));
     }
   };
 
@@ -133,13 +117,14 @@ const BookNowPage = () => {
           label="Workspace"
           placeholder="Select an available space"
           description="Choose the workspace you want to book"
-          data={spaces.map((item) => ({
+          data={availableSpaces.map((item) => ({
             value: item.id,
             label: `${item.name} · ${item.type}`,
           }))}
-          value={selectedSpaceId}
+          value={effectiveSpaceId}
           onChange={(value) => {
             setSelectedSpaceId(value);
+            setApiSlots([]);
             setSelectedSlot(null);
             setRequestError(null);
             setSearchParams(value ? { space: value } : {});
@@ -151,115 +136,149 @@ const BookNowPage = () => {
           mb="xl"
         />
 
-        <Group justify="space-between" gap="md" mb="xl">
-          <Group>
-            <ThemeIcon color="teal" variant="light" size="xl">
-              <FiCalendar />
-            </ThemeIcon>
-            <Box>
-              <Group gap="xs">
-                <Text fw={700} fz="lg">Available slots</Text>
-                <Tooltip
-                  label="Before selecting a slot, please select a workspace."
-                  position="top"
-                  withArrow
+        {!space ? (
+          <Paper
+            withBorder
+            radius="lg"
+            p={{ base: 36, sm: 64 }}
+            bg="light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-7))"
+          >
+            <Stack align="center" gap="md">
+              <ThemeIcon color="teal" variant="light" size={64} radius="xl">
+                <FiCalendar size={28} />
+              </ThemeIcon>
+              <Stack align="center" gap={6}>
+                <Title order={3} ta="center">
+                  Please select a workspace
+                </Title>
+                <Text c="dimmed" ta="center" maw={520}>
+                  Choose a workspace above to view the calendar and its
+                  available booking slots.
+                </Text>
+              </Stack>
+            </Stack>
+          </Paper>
+        ) : (
+          <>
+            <Group justify="space-between" gap="md" mb="xl">
+              <Group>
+                <ThemeIcon color="teal" variant="light" size="xl">
+                  <FiCalendar />
+                </ThemeIcon>
+                <Box>
+                  <Group gap="xs">
+                    <Text fw={700} fz="lg">Available slots</Text>
+                    <Tooltip
+                      label="Select a date to view the workspace availability."
+                      position="top"
+                      withArrow
+                    >
+                      <ActionIcon
+                        variant="subtle"
+                        color="gray"
+                        size="sm"
+                        aria-label="Slot selection help"
+                      >
+                        <FiHelpCircle />
+                      </ActionIcon>
+                    </Tooltip>
+                  </Group>
+                  <Text c="dimmed" size="sm">
+                    All bookings have a fixed two-hour duration
+                  </Text>
+                </Box>
+              </Group>
+              <Group gap="md">
+                {Object.entries(statusConfig).map(([key, config]) => (
+                  <Group key={key} gap={5}>
+                    <Box
+                      w={12}
+                      h={12}
+                      bg={`${config.color}.6`}
+                      style={{ borderRadius: 3 }}
+                    />
+                    <Text size="xs">{config.label}</Text>
+                  </Group>
+                ))}
+              </Group>
+            </Group>
+
+            <Grid gap="xl" align="center">
+              <Grid.Col span={{ base: 12, lg: 4 }}>
+                <Paper
+                  radius="lg"
+                  p="md"
+                  bg="light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-7))"
                 >
-                  <ActionIcon
-                    variant="subtle"
-                    color="gray"
-                    size="sm"
-                    aria-label="Slot selection help"
-                  >
-                    <FiHelpCircle />
-                  </ActionIcon>
-                </Tooltip>
-              </Group>
-              <Text c="dimmed" size="sm">All bookings have a fixed two-hour duration</Text>
-            </Box>
-          </Group>
-          <Group gap="md">
-            {Object.entries(statusConfig).map(([key, config]) => (
-              <Group key={key} gap={5}>
-                <Box w={12} h={12} bg={`${config.color}.6`} style={{ borderRadius: 3 }} />
-                <Text size="xs">{config.label}</Text>
-              </Group>
-            ))}
-          </Group>
-        </Group>
-
-        <Grid gap="xl" align='center'>
-          <Grid.Col span={{ base: 12, lg: 4 }}>
-            <Paper
-              radius="lg"
-              p="md"
-              bg="light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-7))"
-            >
-              <DatePicker
-                value={selectedDate}
-                onChange={setSelectedDate}
-                minDate={new Date()}
-                size="md"
-                style={{ width: '100%' }}
-                styles={{
-                  calendarHeader: {
-                    width: '100%',
-                    maxWidth: 'none',
-                  },
-                  month: {
-                    width: '100%',
-                    tableLayout: 'fixed',
-                  },
-                  day: {
-                    width: '100%',
-                    height: 44,
-                  },
-                }}
-              />
-            </Paper>
-          </Grid.Col>
-
-          <Grid.Col span={{ base: 12, lg: 8 }}>
-            <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="md">
-              {slots.map((slot) => {
-                const request = requestsBySlot.get(slot);
-                const status: Exclude<BookingStatus, 'cancelled'> | 'available' =
-                  !request || request.status === 'cancelled'
-                    ? 'available'
-                    : request.status;
-                const config = statusConfig[status];
-                const isAvailable = status === 'available';
-
-                return (
-                  <Button
-                    key={slot}
-                    h={76}
+                  <DatePicker
+                    value={selectedDate}
+                    onChange={setSelectedDate}
+                    minDate={new Date()}
                     size="md"
-                    color={config.color}
-                    variant="filled"
-                    disabled={!space || !isAvailable}
-                    justify="space-between"
-                    rightSection={
-                      <Badge color={config.color} variant="white" leftSection={config.icon}>
-                        {config.label}
-                      </Badge>
-                    }
-                    onClick={() => setSelectedSlot(slot)}
+                    style={{ width: '100%' }}
                     styles={{
-                      root: {
-                        opacity: 1,
-                        color: 'white',
-                        backgroundColor: `var(--mantine-color-${config.color}-6)`,
+                      calendarHeader: {
+                        width: '100%',
+                        maxWidth: 'none',
                       },
-                      label: { overflow: 'visible' },
+                      month: {
+                        width: '100%',
+                        tableLayout: 'fixed',
+                      },
+                      day: {
+                        width: '100%',
+                        height: 44,
+                      },
                     }}
-                  >
-                    {slot}
-                  </Button>
-                );
-              })}
-            </SimpleGrid>
-          </Grid.Col>
-        </Grid>
+                  />
+                </Paper>
+              </Grid.Col>
+
+              <Grid.Col span={{ base: 12, lg: 8 }}>
+                <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="md">
+                  {apiSlots.map((slot) => {
+                    const status =
+                      slot.status === 'booked' ? 'approved' : slot.status;
+                    const config = statusConfig[status];
+                    const isAvailable = status === 'available';
+
+                    return (
+                      <Button
+                        key={slot.label}
+                        h={76}
+                        size="md"
+                        color={config.color}
+                        variant="filled"
+                        disabled={!isAvailable}
+                        justify="space-between"
+                        rightSection={
+                          <Badge
+                            color={config.color}
+                            variant="white"
+                            leftSection={config.icon}
+                          >
+                            {config.label}
+                          </Badge>
+                        }
+                        onClick={() => setSelectedSlot(slot.label)}
+                        styles={{
+                          root: {
+                            opacity: 1,
+                            color: 'white',
+                            backgroundColor: `var(--mantine-color-${config.color}-6)`,
+                          },
+                          label: { overflow: 'visible' },
+                        }}
+                      >
+                        {slot.label}
+                      </Button>
+                    );
+                  })}
+                </SimpleGrid>
+              </Grid.Col>
+            </Grid>
+          </>
+        )}
       </Paper>
 
       <AppModal

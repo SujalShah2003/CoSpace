@@ -1,4 +1,6 @@
+import { useState } from 'react';
 import {
+  Alert,
   Anchor,
   Button,
   Checkbox,
@@ -18,25 +20,31 @@ import {
   signInValidation,
   type SignInValues,
 } from '@/schemas/signin.schema';
+import { login } from '@/services/auth.api';
+import { getApiError } from '@/services/apiClient';
 import { createSession } from '@/utils/auth';
 
 const SignInPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const form = useForm<SignInValues>({
     initialValues: signInInitialValues,
     validate: signInValidation,
   });
 
-  const handleSubmit = form.onSubmit((values) => {
-    createSession({
-      name: values.email.split('@')[0] || 'Admin',
-      email: values.email,
-      role: 'admin',
-    });
-
-    const returnTo = (location.state as { returnTo?: string } | null)?.returnTo;
-    navigate(returnTo || '/admin', { replace: true });
+  const handleSubmit = form.onSubmit(async (values) => {
+    try {
+      const session = await login(values);
+      createSession(session);
+      const returnTo = (location.state as { returnTo?: string } | null)?.returnTo;
+      navigate(
+        returnTo || (session.user.role === 'admin' ? '/admin' : '/admin/bookings'),
+        { replace: true },
+      );
+    } catch (error) {
+      setSubmitError(getApiError(error, 'Unable to sign in.'));
+    }
   });
 
   return (
@@ -49,6 +57,7 @@ const SignInPage = () => {
 
       <form onSubmit={handleSubmit}>
         <Stack gap="lg">
+          {submitError && <Alert color="red">{submitError}</Alert>}
           <TextInput
             label="Email address"
             placeholder="admin@cospace.com"
@@ -72,7 +81,13 @@ const SignInPage = () => {
               Forgot password?
             </Anchor>
           </Group>
-          <Button type="submit" color="teal" size="md" rightSection={<FiArrowRight />}>
+          <Button
+            type="submit"
+            color="teal"
+            size="md"
+            rightSection={<FiArrowRight />}
+            loading={form.submitting}
+          >
             Sign in
           </Button>
         </Stack>

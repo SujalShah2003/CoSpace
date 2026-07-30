@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Button,
   FileInput,
@@ -20,6 +20,7 @@ import { FiImage, FiSave } from "react-icons/fi";
 import { Navigate, useNavigate, useParams } from "react-router-dom";
 import AdminBreadcrumbs from "@/components/admin/common/AdminBreadcrumbs";
 import { useSpaces } from "@/hooks/useSpaces";
+import { getCurrentUser } from "@/utils/auth";
 
 type SpaceFormValues = {
   title: string;
@@ -42,7 +43,7 @@ const fileToDataUrl = (file: File) =>
 const SpaceFormPage = () => {
   const { spaceId } = useParams();
   const navigate = useNavigate();
-  const { spaces, createSpace, updateSpace } = useSpaces();
+  const { spaces, loading, createSpace, updateSpace } = useSpaces();
   const editingSpace = spaceId
     ? spaces.find((space) => space.id === spaceId)
     : undefined;
@@ -73,6 +74,31 @@ const SpaceFormPage = () => {
     },
   });
 
+  useEffect(() => {
+    if (!editingSpace) return;
+    const values: SpaceFormValues = {
+      title: editingSpace.name,
+      description: editingSpace.description,
+      capacity: editingSpace.capacity,
+      status: editingSpace.status ?? "available",
+      facilities: editingSpace.amenities,
+      tagName: editingSpace.type,
+      profilePicture: null,
+    };
+    form.setValues(values);
+    form.resetDirty(values);
+    // The workspace arrives asynchronously and should initialize the form once.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editingSpace?.id]);
+
+  if (getCurrentUser()?.role !== "admin") {
+    return <Navigate to="/admin/bookings" replace />;
+  }
+
+  if (loading && isEditing) {
+    return null;
+  }
+
   if (isEditing && !editingSpace) {
     return <Navigate to="/admin/bookings" replace />;
   }
@@ -97,9 +123,9 @@ const SpaceFormPage = () => {
     };
 
     if (editingSpace) {
-      updateSpace(editingSpace.id, spaceValues);
+      await updateSpace(editingSpace.id, spaceValues);
     } else {
-      createSpace(spaceValues);
+      await createSpace(spaceValues);
     }
 
     navigate("/admin/bookings");

@@ -1,4 +1,6 @@
+import { useState } from 'react';
 import {
+  Alert,
   Anchor,
   Button,
   Group,
@@ -16,18 +18,30 @@ import {
   signUpValidation,
   type SignUpValues,
 } from '@/schemas/signup.schema';
+import { registerMember } from '@/services/auth.api';
+import { getApiError } from '@/services/apiClient';
 import { createSession } from '@/utils/auth';
 
 const SignUpPage = () => {
   const navigate = useNavigate();
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const form = useForm<SignUpValues>({
     initialValues: signUpInitialValues,
     validate: signUpValidation,
   });
 
-  const handleSubmit = form.onSubmit((values) => {
-    createSession({ name: values.name, email: values.email, role: 'admin' });
-    navigate('/admin', { replace: true });
+  const handleSubmit = form.onSubmit(async (values) => {
+    try {
+      const session = await registerMember({
+        name: values.name,
+        email: values.email,
+        password: values.password,
+      });
+      createSession(session);
+      navigate('/admin/bookings', { replace: true });
+    } catch (error) {
+      setSubmitError(getApiError(error, 'Unable to create your account.'));
+    }
   });
 
   return (
@@ -40,6 +54,7 @@ const SignUpPage = () => {
 
       <form onSubmit={handleSubmit}>
         <Stack gap="md">
+          {submitError && <Alert color="red">{submitError}</Alert>}
           <TextInput
             label="Full name"
             placeholder="Your name"
@@ -70,7 +85,13 @@ const SignUpPage = () => {
               {...form.getInputProps('confirmPassword')}
             />
           </Group>
-          <Button type="submit" color="teal" size="md" rightSection={<FiArrowRight />}>
+          <Button
+            type="submit"
+            color="teal"
+            size="md"
+            rightSection={<FiArrowRight />}
+            loading={form.submitting}
+          >
             Create account
           </Button>
         </Stack>
