@@ -1,6 +1,8 @@
+import './load-env.js';
+
 type Environment = {
   port: number;
-  clientOrigin: string;
+  clientOrigins: string[];
   jwtAccessSecret: string;
   jwtRefreshSecret: string;
   accessTokenExpiresIn: number;
@@ -9,7 +11,10 @@ type Environment = {
 
 export const env: Environment = {
   port: Number(process.env.PORT || 4000),
-  clientOrigin: process.env.CLIENT_ORIGIN || 'http://localhost:5173',
+  clientOrigins: (process.env.CLIENT_ORIGIN || 'http://localhost:5173')
+    .split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean),
   jwtAccessSecret:
     process.env.JWT_ACCESS_SECRET ||
     'cospace-access-development-secret-change-in-production',

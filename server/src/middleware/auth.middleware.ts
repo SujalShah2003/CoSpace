@@ -1,6 +1,6 @@
 import jwt from 'jsonwebtoken';
 import { env } from '../config/env.js';
-import { store } from '../data/store.js';
+import { findUserById } from '../services/auth.service.js';
 import { AppError } from '../utils/AppError.js';
 import type { NextFunction, Request, Response } from 'express';
 import type { JwtPayload } from 'jsonwebtoken';
@@ -12,11 +12,11 @@ type AccessTokenPayload = JwtPayload & {
   type: 'access';
 };
 
-export const authenticate = (
+export const authenticate = async (
   request: Request,
   _response: Response,
   next: NextFunction,
-): void => {
+): Promise<void> => {
   const token = request.headers.authorization?.replace(/^Bearer\s+/i, '');
 
   if (!token) {
@@ -31,7 +31,7 @@ export const authenticate = (
     if (payload.type !== 'access') {
       throw new Error('Invalid access token type');
     }
-    const user = store.users.find((item) => item.id === payload.sub);
+    const user = await findUserById(payload.sub);
 
     if (!user) {
       throw new Error('User not found');

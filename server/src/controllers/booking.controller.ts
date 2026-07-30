@@ -2,7 +2,7 @@ import * as bookingService from '../services/booking.service.js';
 import type { Request, Response } from 'express';
 import type { BookingInput, User } from '../types/domain.js';
 import { sendSuccess } from '../utils/apiResponse.js';
-import { paginate, parsePagination } from '../utils/pagination.js';
+import { parsePagination } from '../utils/pagination.js';
 
 type BookingParams = { bookingId: string };
 type ReviewBody = { status: 'approved' | 'rejected' };
@@ -13,17 +13,17 @@ const requireUser = (request: { user?: User }): User => {
   return request.user;
 };
 
-export const list = (
+export const list = async (
   request: Request<unknown, unknown, unknown, BookingListQuery>,
   response: Response,
-): void => {
+): Promise<void> => {
   const { page, pageSize } = parsePagination(
     request.query.page,
     request.query.pageSize,
     10,
   );
-  const result = paginate(
-    bookingService.listBookings(requireUser(request)),
+  const result = await bookingService.listBookings(
+    requireUser(request),
     page,
     pageSize,
   );
@@ -34,45 +34,45 @@ export const list = (
   });
 };
 
-export const book = (
+export const book = async (
   request: Request<unknown, unknown, BookingInput>,
   response: Response,
-): void => {
+): Promise<void> => {
   sendSuccess(response, {
     statusCode: 201,
     message: 'Booking created successfully.',
-    data: bookingService.createBooking(request.body, requireUser(request), 'approved'),
+    data: await bookingService.createBooking(request.body, requireUser(request), 'approved'),
   });
 };
 
-export const requestBooking = (
+export const requestBooking = async (
   request: Request<unknown, unknown, BookingInput>,
   response: Response,
-): void => {
+): Promise<void> => {
   sendSuccess(response, {
     statusCode: 201,
     message: 'Booking request submitted successfully.',
-    data: bookingService.createBooking(request.body, requireUser(request), 'pending'),
+    data: await bookingService.createBooking(request.body, requireUser(request), 'pending'),
   });
 };
 
-export const cancel = (
+export const cancel = async (
   request: Request<BookingParams>,
   response: Response,
-): void => {
+): Promise<void> => {
   sendSuccess(response, {
     message: 'Booking cancelled successfully.',
-    data: bookingService.cancelBooking(request.params.bookingId, requireUser(request)),
+    data: await bookingService.cancelBooking(request.params.bookingId, requireUser(request)),
   });
 };
 
-export const review = (
+export const review = async (
   request: Request<BookingParams, unknown, ReviewBody>,
   response: Response,
-): void => {
+): Promise<void> => {
   sendSuccess(response, {
     message: `Booking request ${request.body.status} successfully.`,
-    data: bookingService.reviewBooking(
+    data: await bookingService.reviewBooking(
       request.params.bookingId,
       request.body.status,
       requireUser(request),

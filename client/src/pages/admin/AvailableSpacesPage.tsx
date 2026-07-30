@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useDebouncedValue } from "@mantine/hooks";
 import {
   ActionIcon,
   Alert,
@@ -8,6 +9,7 @@ import {
   Card,
   Group,
   Image,
+  NumberInput,
   Paper,
   Stack,
   SimpleGrid,
@@ -23,6 +25,7 @@ import {
   FiEdit2,
   FiEye,
   FiPlus,
+  FiSearch,
   FiTrash2,
   FiUsers,
 } from "react-icons/fi";
@@ -35,13 +38,20 @@ import { useSpaces } from "@/hooks/useSpaces";
 import { getCurrentUser } from "@/utils/auth";
 
 const AvailableSpacesPage = () => {
+  const [search, setSearch] = useState("");
+  const [debouncedSearch] = useDebouncedValue(search, 350);
+  const [minimumCapacity, setMinimumCapacity] =
+    useState<number | string>(1);
   const {
     spaces,
     deleteSpace,
     hasMore,
     loadMore,
     loadingMore,
-  } = useSpaces(false, 6);
+  } = useSpaces(false, 6, {
+    search: debouncedSearch,
+    minCapacity: Number(minimumCapacity) || 1,
+  });
   const isAdmin = getCurrentUser()?.role === "admin";
   const [selectedSpace, setSelectedSpace] = useState<Space | null>(null);
   const [spaceToDelete, setSpaceToDelete] = useState<Space | null>(null);
@@ -89,6 +99,28 @@ const AvailableSpacesPage = () => {
           </Button>
         )}
       </Group>
+
+      <Paper withBorder radius="xl" p="lg" shadow="xs">
+        <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="md">
+          <TextInput
+            label="Search spaces"
+            description="Search by workspace name, type, description or amenity"
+            placeholder="Enter a search term"
+            value={search}
+            onChange={(event) => setSearch(event.currentTarget.value)}
+            leftSection={<FiSearch />}
+          />
+          <NumberInput
+            label="Minimum capacity"
+            description="Show spaces that can accommodate at least this many people"
+            value={minimumCapacity}
+            onChange={setMinimumCapacity}
+            min={1}
+            allowDecimal={false}
+            allowNegative={false}
+          />
+        </SimpleGrid>
+      </Paper>
 
       <SimpleGrid cols={{ base: 1, md: 2, xl: 3 }} spacing="xl">
         {spaces.map((space) => (

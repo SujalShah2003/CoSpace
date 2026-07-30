@@ -3,7 +3,19 @@ import assert from 'node:assert/strict';
 import request from 'supertest';
 import { app } from '../src/app.js';
 
-test('register defaults to member and member can request a booking', async () => {
+test('health endpoint uses the standard success response', async () => {
+  const response = await request(app).get('/api/health').expect(200);
+  assert.equal(response.body.success, true);
+  assert.equal(response.body.data.status, 'healthy');
+});
+
+const integrationOptions = {
+  skip: process.env.RUN_INTEGRATION_TESTS !== 'true'
+    ? 'Set RUN_INTEGRATION_TESTS=true to test against the configured Supabase project.'
+    : false,
+};
+
+test('register defaults to member and member can request a booking', integrationOptions, async () => {
   const email = `member-${Date.now()}@example.com`;
   const registration = await request(app)
     .post('/api/auth/register')
@@ -27,6 +39,14 @@ test('register defaults to member and member can request a booking', async () =>
   assert.equal(pagedSpaces.body.data.length, 2);
   assert.equal(pagedSpaces.body.pagination.pageSize, 2);
   assert.equal(pagedSpaces.body.pagination.hasNextPage, true);
+
+  const filteredSpaces = await request(app)
+    .get('/api/public/spaces?search=olive&minCapacity=5')
+    .expect(200);
+  assert.equal(filteredSpaces.body.data.length, 1);
+  assert.equal(filteredSpaces.body.data[0].name, 'The Olive Room');
+  assert.equal(filteredSpaces.body.pagination.total, 1);
+
   const tomorrow = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
 
   const booking = await request(app)
@@ -38,7 +58,7 @@ test('register defaults to member and member can request a booking', async () =>
   assert.equal(booking.body.data.status, 'pending');
 });
 
-test('admin can authenticate and manage spaces', async () => {
+test('admin can authenticate and manage spaces', integrationOptions, async () => {
   const login = await request(app)
     .post('/api/auth/login')
     .send({ email: 'admin@cospace.com', password: 'Admin@123' })

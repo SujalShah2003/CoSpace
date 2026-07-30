@@ -16,6 +16,11 @@ export type BookingSlot = {
 
 export type SpaceWithBookedTimes = Space & { bookedTimes?: BookingSlot[] };
 export type SpaceInput = Omit<Space, 'id'>;
+export type SpaceListFilters = {
+  search?: string;
+  minCapacity?: number;
+  type?: string;
+};
 
 const getPagination = <T>(
   records: T[],
@@ -36,26 +41,35 @@ export const getPublicSpaces = async (
   page = 1,
   pageSize = 50,
   date?: string,
+  filters: SpaceListFilters = {},
 ) => {
   const { data } = await apiClient.get<ApiResponse<SpaceWithBookedTimes[]>>(
     '/public/spaces',
-    { params: { date, page, pageSize } },
+    { params: { date, page, pageSize, ...filters } },
   );
   return getPagination(data.data, data);
 };
 
-export const getMemberSpaces = async (page = 1, pageSize = 50) => {
+export const getMemberSpaces = async (
+  page = 1,
+  pageSize = 50,
+  filters: SpaceListFilters = {},
+) => {
   const { data } = await apiClient.get<ApiResponse<Space[]>>(
     '/member/spaces',
-    { params: { page, pageSize } },
+    { params: { page, pageSize, ...filters } },
   );
   return getPagination(data.data, data);
 };
 
-export const getAdminSpaces = async (page = 1, pageSize = 50) => {
+export const getAdminSpaces = async (
+  page = 1,
+  pageSize = 50,
+  filters: SpaceListFilters = {},
+) => {
   const { data } = await apiClient.get<ApiResponse<Space[]>>(
     '/admin/spaces',
-    { params: { page, pageSize } },
+    { params: { page, pageSize, ...filters } },
   );
   return getPagination(data.data, data);
 };

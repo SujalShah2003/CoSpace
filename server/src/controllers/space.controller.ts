@@ -1,31 +1,46 @@
-import { store } from '../data/store.js';
 import * as spaceService from '../services/space.service.js';
 import type { Request, Response } from 'express';
 import type { SpaceInput } from '../types/domain.js';
 import { sendSuccess } from '../utils/apiResponse.js';
-import { paginate, parsePagination } from '../utils/pagination.js';
+import { parsePagination } from '../utils/pagination.js';
 
 type SpaceParams = { spaceId: string };
 type SpaceListQuery = {
   date?: string;
   page?: string;
   pageSize?: string;
+  search?: string;
+  minCapacity?: string;
+  type?: string;
 };
 
-export const listPublic = (
+const getFilters = (query: SpaceListQuery) => {
+  const parsedCapacity = Number(query.minCapacity);
+  return {
+    search: query.search,
+    type: query.type,
+    minCapacity:
+      Number.isFinite(parsedCapacity) && parsedCapacity > 0
+        ? parsedCapacity
+        : undefined,
+  };
+};
+
+export const listPublic = async (
   request: Request<unknown, unknown, unknown, SpaceListQuery>,
   response: Response,
-): void => {
+): Promise<void> => {
   const { page, pageSize } = parsePagination(
     request.query.page,
     request.query.pageSize,
     12,
   );
-  const result = paginate(
-    spaceService.listSpaces(request.query.date),
+  const result = await spaceService.listSpaces({
+    date: request.query.date,
+    filters: getFilters(request.query),
     page,
     pageSize,
-  );
+  });
   sendSuccess(response, {
     message: 'Spaces retrieved successfully.',
     data: result.records,
@@ -33,16 +48,21 @@ export const listPublic = (
   });
 };
 
-export const listAll = (
+export const listAll = async (
   request: Request<unknown, unknown, unknown, SpaceListQuery>,
   response: Response,
-): void => {
+): Promise<void> => {
   const { page, pageSize } = parsePagination(
     request.query.page,
     request.query.pageSize,
     12,
   );
-  const result = paginate(store.spaces, page, pageSize);
+  const result = await spaceService.listSpaces({
+    filters: getFilters(request.query),
+    page,
+    pageSize,
+    includeUnavailable: true,
+  });
   sendSuccess(response, {
     message: 'Spaces retrieved successfully.',
     data: result.records,
@@ -50,42 +70,42 @@ export const listAll = (
   });
 };
 
-export const slots = (
+export const slots = async (
   request: Request<SpaceParams, unknown, unknown, SpaceListQuery>,
   response: Response,
-): void => {
+): Promise<void> => {
   sendSuccess(response, {
     message: 'Booking slots retrieved successfully.',
-    data: spaceService.getSlots(request.params.spaceId, request.query.date ?? ''),
+    data: await spaceService.getSlots(request.params.spaceId, request.query.date ?? ''),
   });
 };
 
-export const create = (
+export const create = async (
   request: Request<unknown, unknown, SpaceInput>,
   response: Response,
-): void => {
+): Promise<void> => {
   sendSuccess(response, {
     statusCode: 201,
     message: 'Space created successfully.',
-    data: spaceService.createSpace(request.body),
+    data: await spaceService.createSpace(request.body),
   });
 };
 
-export const update = (
+export const update = async (
   request: Request<SpaceParams, unknown, Partial<SpaceInput>>,
   response: Response,
-): void => {
+): Promise<void> => {
   sendSuccess(response, {
     message: 'Space updated successfully.',
-    data: spaceService.updateSpace(request.params.spaceId, request.body),
+    data: await spaceService.updateSpace(request.params.spaceId, request.body),
   });
 };
 
-export const remove = (
+export const remove = async (
   request: Request<SpaceParams>,
   response: Response,
-): void => {
-  spaceService.removeSpace(request.params.spaceId);
+): Promise<void> => {
+  await spaceService.removeSpace(request.params.spaceId);
   sendSuccess(response, {
     message: 'Space deleted successfully.',
     data: null,

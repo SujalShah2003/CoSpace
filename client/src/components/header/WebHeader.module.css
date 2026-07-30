@@ -22,8 +22,68 @@
   transform: scaleX(1);
 }
 
+.authButton,
+.themeButton {
+  transition:
+    transform 180ms ease,
+    box-shadow 180ms ease,
+    background-color 180ms ease,
+    border-color 180ms ease,
+    color 180ms ease;
+}
+
+.authButton:hover,
+.authButton:focus-visible,
+.themeButton:hover,
+.themeButton:focus-visible {
+  transform: translateY(-2px);
+}
+
+.signInButton:hover,
+.signInButton:focus-visible {
+  color: light-dark(var(--mantine-color-teal-8), var(--mantine-color-teal-2));
+  background: light-dark(var(--mantine-color-teal-0), var(--mantine-color-dark-6));
+  border-color: var(--mantine-color-teal-6);
+  box-shadow: 0 7px 18px rgb(18 184 134 / 14%);
+}
+
+.signUpButton:hover,
+.signUpButton:focus-visible {
+  background: var(--mantine-color-teal-8);
+  box-shadow: 0 8px 20px rgb(18 184 134 / 28%);
+}
+
+.themeButton:hover,
+.themeButton:focus-visible {
+  color: var(--mantine-color-teal-6);
+  background: light-dark(var(--mantine-color-teal-0), var(--mantine-color-dark-6));
+  border-color: var(--mantine-color-teal-5);
+  box-shadow: 0 7px 18px rgb(18 184 134 / 12%);
+}
+
+.themeButton svg {
+  transition: transform 220ms ease;
+}
+
+.themeButton:hover svg,
+.themeButton:focus-visible svg {
+  transform: rotate(-12deg) scale(1.08);
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .navLink::after {
+  .navLink::after,
+  .authButton,
+  .themeButton,
+  .themeButton svg {
     transition: none;
+  }
+
+  .authButton:hover,
+  .authButton:focus-visible,
+  .themeButton:hover,
+  .themeButton:focus-visible,
+  .themeButton:hover svg,
+  .themeButton:focus-visible svg {
+    transform: none;
   }
 }

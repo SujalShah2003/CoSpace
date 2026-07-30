@@ -1,7 +1,10 @@
 {
   "name": "co-space-server",
   "version": "1.0.0",
-  "description": "In-memory REST API for CoSpace Booking",
+  "description": "Supabase-backed REST API for CoSpace Booking",
+  "engines": {
+    "node": ">=20"
+  },
   "type": "module",
   "main": "dist/server.js",
   "scripts": {
@@ -9,9 +12,12 @@
     "build": "tsc",
     "start": "node dist/server.js",
     "typecheck": "tsc --noEmit && tsc -p tsconfig.test.json",
-    "test": "tsx --test test/**/*.test.ts"
+    "test": "tsx --test test/**/*.test.ts",
+    "db:seed": "tsx scripts/seed-admin.ts"
   },
   "dependencies": {
+    "@supabase/server": "^1.4.1",
+    "@supabase/supabase-js": "^2.111.0",
     "bcryptjs": "^3.0.2",
     "cors": "^2.8.5",
     "express": "^5.1.0",

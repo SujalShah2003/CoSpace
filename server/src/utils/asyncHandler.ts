@@ -1,6 +1,8 @@
 import type { RequestHandler } from 'express';
 
-export const asyncHandler = (handler: RequestHandler): RequestHandler => (
+type AsyncController = (...arguments_: any[]) => unknown;
+
+export const asyncHandler = (handler: AsyncController): RequestHandler => (
   request,
   response,
   next,

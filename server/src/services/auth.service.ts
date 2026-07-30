@@ -2,8 +2,9 @@ import bcrypt from 'bcryptjs';
 import jwt, { type JwtPayload } from 'jsonwebtoken';
 import { randomUUID } from 'node:crypto';
 import { env } from '../config/env.js';
-import { store } from '../data/store.js';
+import { getSupabaseAdmin } from '../config/supabase.js';
 import { AppError } from '../utils/AppError.js';
+import type { Database } from '../types/supabase.js';
 import type {
   AuthCredentials,
   AuthSession,
@@ -24,7 +25,29 @@ type RefreshPayload = JwtPayload & {
 const publicUser = ({ passwordHash: _passwordHash, ...user }: User): PublicUser =>
   user;
 
-const createTokenPair = (user: User): TokenPair => {
+type UserRow = Database['public']['Tables']['users']['Row'];
+
+export const mapUser = (row: UserRow): User => ({
+  id: row.id,
+  name: row.name,
+  email: row.email,
+  passwordHash: row.password_hash,
+  role: row.role,
+  createdAt: row.created_at,
+});
+
+export const findUserById = async (userId: string): Promise<User | null> => {
+  const { data, error } = await getSupabaseAdmin()
+    .from('users')
+    .select('*')
+    .eq('id', userId)
+    .maybeSingle();
+
+  if (error) throw new AppError(500, `Unable to read the user: ${error.message}`);
+  return data ? mapUser(data) : null;
+};
+
+const createTokenPair = async (user: User): Promise<TokenPair> => {
   const now = Date.now();
   const sessionId = randomUUID();
   const accessTokenExpiresAt = new Date(
@@ -34,14 +57,19 @@ const createTokenPair = (user: User): TokenPair => {
     now + env.refreshTokenExpiresIn * 1000,
   ).toISOString();
 
-  store.refreshSessions = store.refreshSessions.filter(
-    (session) => session.expiresAt > now,
-  );
-  store.refreshSessions.push({
+  const supabase = getSupabaseAdmin();
+  await supabase
+    .from('refresh_sessions')
+    .delete()
+    .lt('expires_at', new Date(now).toISOString());
+  const { error } = await supabase.from('refresh_sessions').insert({
     id: sessionId,
-    userId: user.id,
-    expiresAt: new Date(refreshTokenExpiresAt).getTime(),
+    user_id: user.id,
+    expires_at: refreshTokenExpiresAt,
   });
+  if (error) {
+    throw new AppError(500, `Unable to create the login session: ${error.message}`);
+  }
 
   return {
     accessToken: jwt.sign(
@@ -62,9 +90,9 @@ const createTokenPair = (user: User): TokenPair => {
   };
 };
 
-const createAuthSession = (user: User): AuthSession => ({
+const createAuthSession = async (user: User): Promise<AuthSession> => ({
   user: publicUser(user),
-  tokens: createTokenPair(user),
+  tokens: await createTokenPair(user),
 });
 
 const verifyRefreshToken = (refreshToken: string): RefreshPayload => {
@@ -99,67 +127,86 @@ export const registerMember = async ({
   }
 
   const normalizedEmail = email.trim().toLowerCase();
-  if (store.users.some((user) => user.email === normalizedEmail)) {
+  const supabase = getSupabaseAdmin();
+  const { data: existing, error: readError } = await supabase
+    .from('users')
+    .select('id')
+    .eq('email', normalizedEmail)
+    .maybeSingle();
+  if (readError) {
+    throw new AppError(500, `Unable to check the account: ${readError.message}`);
+  }
+  if (existing) {
     throw new AppError(409, 'An account with this email already exists.');
   }
 
-  const user: User = {
-    id: randomUUID(),
+  const { data, error } = await supabase.from('users').insert({
     name: name.trim(),
     email: normalizedEmail,
-    passwordHash: await bcrypt.hash(password, 10),
+    password_hash: await bcrypt.hash(password, 10),
     role: 'member',
-    createdAt: new Date().toISOString(),
-  };
-  store.users.push(user);
-  return createAuthSession(user);
+  }).select('*').single();
+  if (error) {
+    if (error.code === '23505') {
+      throw new AppError(409, 'An account with this email already exists.');
+    }
+    throw new AppError(500, `Unable to register the member: ${error.message}`);
+  }
+  return createAuthSession(mapUser(data));
 };
 
 export const login = async ({
   email,
   password,
 }: AuthCredentials): Promise<AuthSession> => {
-  const user = store.users.find(
-    (item) => item.email === String(email || '').trim().toLowerCase(),
-  );
+  const { data, error } = await getSupabaseAdmin()
+    .from('users')
+    .select('*')
+    .eq('email', String(email || '').trim().toLowerCase())
+    .maybeSingle();
+  if (error) throw new AppError(500, `Unable to sign in: ${error.message}`);
+  const user = data ? mapUser(data) : null;
   if (!user || !(await bcrypt.compare(String(password || ''), user.passwordHash))) {
     throw new AppError(401, 'Invalid email or password.');
   }
   return createAuthSession(user);
 };
 
-export const refresh = (refreshToken: string): TokenPair => {
+export const refresh = async (refreshToken: string): Promise<TokenPair> => {
   if (!refreshToken) throw new AppError(400, 'Refresh token is required.');
   const payload = verifyRefreshToken(refreshToken);
-  const session = store.refreshSessions.find(
-    (item) =>
-      item.id === payload.jti &&
-      item.userId === payload.sub &&
-      item.expiresAt > Date.now(),
-  );
-  const user = store.users.find((item) => item.id === payload.sub);
+  const supabase = getSupabaseAdmin();
+  const { data: session, error } = await supabase
+    .from('refresh_sessions')
+    .delete()
+    .eq('id', payload.jti)
+    .eq('user_id', payload.sub)
+    .gt('expires_at', new Date().toISOString())
+    .select('id')
+    .maybeSingle();
+  if (error) {
+    throw new AppError(500, `Unable to rotate the session: ${error.message}`);
+  }
+  const user = await findUserById(payload.sub);
 
   if (!session || !user) {
     throw new AppError(401, 'The refresh token has been revoked or has expired.');
   }
 
-  // Rotate refresh tokens: each refresh token can be used only once.
-  store.refreshSessions = store.refreshSessions.filter(
-    (item) => item.id !== session.id,
-  );
   return createTokenPair(user);
 };
 
-export const logout = (refreshToken: string): void => {
+export const logout = async (refreshToken: string): Promise<void> => {
   if (!refreshToken) return;
   try {
     const payload = jwt.verify(
       refreshToken,
       env.jwtRefreshSecret,
     ) as RefreshPayload;
-    store.refreshSessions = store.refreshSessions.filter(
-      (item) => item.id !== payload.jti,
-    );
+    await getSupabaseAdmin()
+      .from('refresh_sessions')
+      .delete()
+      .eq('id', payload.jti);
   } catch {
     // Logout remains idempotent even if the supplied token is already invalid.
   }

@@ -58,19 +58,6 @@ export type BookingSlot = {
   bookingId?: string;
 };
 
-export type RefreshSession = {
-  id: string;
-  userId: string;
-  expiresAt: number;
-};
-
-export type Store = {
-  users: User[];
-  spaces: Space[];
-  bookings: Booking[];
-  refreshSessions: RefreshSession[];
-};
-
 export type AuthCredentials = { email: string; password: string };
 export type RegistrationInput = AuthCredentials & { name: string };
 export type TokenPair = {

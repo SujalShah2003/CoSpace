@@ -21,7 +21,8 @@ const AppModal = ({
     onClose={onClose}
     title={title}
     size={size}
-    centered
+    centered={false}
+    yOffset="5dvh"
     radius="md"
     padding="xl"
     overlayProps={{ backgroundOpacity: 0.55, blur: 5 }}
@@ -30,15 +31,18 @@ const AppModal = ({
       header: {
         minHeight: 86,
         paddingInline: 30,
-        background:
-          'light-dark(var(--mantine-color-gray-1), var(--mantine-color-dark-7))',
-        borderBottom: '1px solid var(--mantine-color-default-border)',
+        background: 'var(--mantine-color-teal-8)',
+        borderBottom: '1px solid var(--mantine-color-teal-8)',
       },
       title: {
         fontWeight: 800,
         fontSize: 'var(--mantine-font-size-xl)',
+        color: 'var(--mantine-color-white)',
       },
-      close: { color: 'var(--mantine-color-dimmed)' },
+      close: {
+        color: 'var(--mantine-color-white)',
+        backgroundColor: 'transparent',
+      },
       body: { padding: 30 },
     }}
   >

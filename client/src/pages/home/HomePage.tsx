@@ -1,4 +1,5 @@
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
+import { useDebouncedValue } from '@mantine/hooks';
 import { useNavigate } from 'react-router-dom';
 import AmenitiesSection from '@/components/home/AmenitiesSection';
 import AvailabilitySection from '@/components/home/AvailabilitySection';
@@ -12,29 +13,27 @@ import { isAuthenticated } from '@/utils/auth';
 
 const HomePage = () => {
   const navigate = useNavigate();
+  const [query, setQuery] = useState('');
+  const [debouncedQuery] = useDebouncedValue(query, 350);
+  const [spaceType, setSpaceType] = useState<string | null>('All spaces');
+  const [capacity, setCapacity] = useState<number | string>(1);
   const {
     spaces,
     hasMore,
     loadMore,
     loadingMore,
-  } = useSpaces(true, 6);
-  const [query, setQuery] = useState('');
-  const [spaceType, setSpaceType] = useState<string | null>('All spaces');
-  const [capacity, setCapacity] = useState<number | string>(1);
+  } = useSpaces(true, 6, {
+    search: debouncedQuery,
+    minCapacity: Number(capacity) || 1,
+    type:
+      spaceType && spaceType !== 'All spaces'
+        ? spaceType
+        : undefined,
+  });
   const [selectedSpace, setSelectedSpace] = useState<Space | null>(null);
 
-  const filteredSpaces = useMemo(
-    () => spaces.filter((space) => {
-      if (space.status === 'unavailable') return false;
-      const matchesQuery = `${space.name} ${space.type}`
-        .toLowerCase()
-        .includes(query.toLowerCase());
-      const matchesType = spaceType === 'All spaces' || space.type === spaceType;
-      const requestedCapacity = typeof capacity === 'number' ? capacity : 1;
-
-      return matchesQuery && matchesType && space.capacity >= requestedCapacity;
-    }),
-    [capacity, query, spaceType, spaces],
+  const filteredSpaces = spaces.filter(
+    (space) => space.status !== 'unavailable',
   );
 
   const showSpaces = () => {

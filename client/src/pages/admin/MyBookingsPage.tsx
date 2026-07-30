@@ -29,8 +29,8 @@ import {
 
 const statusColors: Record<BookingStatus, string> = {
   pending: 'blue',
-  approved: 'red',
-  rejected: 'gray',
+  approved: 'green',
+  rejected: 'red',
   cancelled: 'gray',
 };
 
@@ -72,7 +72,7 @@ const MyBookingsPage = () => {
             My bookings
           </Title>
           <Text c="dimmed" fz="lg">
-            Track requests and cancel future pending or approved bookings.
+            Track requests and cancel future bookings while they are pending.
           </Text>
         </Box>
         <Button
@@ -113,7 +113,9 @@ const MyBookingsPage = () => {
                 </Table.Tr>
               ) : (
                 ownBookings.map((booking) => {
-                  const cancellable = canCancelBooking(booking);
+                  const cancellable =
+                    booking.status === 'pending' &&
+                    canCancelBooking(booking);
 
                   return (
                     <Table.Tr key={booking.id}>
@@ -131,16 +133,21 @@ const MyBookingsPage = () => {
                         </Badge>
                       </Table.Td>
                       <Table.Td>
-                        <Button
-                          size="xs"
-                          color="red"
-                          variant="light"
-                          leftSection={<FiXCircle />}
-                          disabled={!cancellable}
-                          onClick={() => setBookingToCancel(booking)}
-                        >
-                          Cancel
-                        </Button>
+                        {cancellable ? (
+                          <Button
+                            size="xs"
+                            color="red"
+                            variant="light"
+                            leftSection={<FiXCircle />}
+                            onClick={() => setBookingToCancel(booking)}
+                          >
+                            Cancel
+                          </Button>
+                        ) : (
+                          <Text c="dimmed" ta="center">
+                            —
+                          </Text>
+                        )}
                       </Table.Td>
                     </Table.Tr>
                   );

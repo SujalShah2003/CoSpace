@@ -43,22 +43,22 @@ export const me = (request: Request, response: Response): void => {
   });
 };
 
-export const refresh = (
+export const refresh = async (
   request: Request<unknown, unknown, RefreshBody>,
   response: Response,
-): void => {
-  const tokens = authService.refresh(request.body.refreshToken);
+): Promise<void> => {
+  const tokens = await authService.refresh(request.body.refreshToken);
   sendSuccess(response, {
     message: 'Tokens refreshed successfully.',
     data: { tokens },
   });
 };
 
-export const logout = (
+export const logout = async (
   request: Request<unknown, unknown, RefreshBody>,
   response: Response,
-): void => {
-  authService.logout(request.body.refreshToken);
+): Promise<void> => {
+  await authService.logout(request.body.refreshToken);
   sendSuccess(response, {
     message: 'Logout successful.',
     data: null,

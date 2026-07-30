@@ -10,7 +10,15 @@ import { sendSuccess } from './utils/apiResponse.js';
 
 export const app = express();
 
-app.use(cors({ origin: env.clientOrigin }));
+app.use(cors({
+  origin: (origin, callback) => {
+    if (!origin || env.clientOrigins.includes(origin)) {
+      callback(null, true);
+      return;
+    }
+    callback(new Error('This origin is not allowed by CORS.'));
+  },
+}));
 
 app.use(express.json({ limit: '5mb' }));
 

@@ -129,6 +129,7 @@ const HeroSection = ({
               value={spaceType}
               onChange={onSpaceTypeChange}
               size="md"
+              checkIconPosition='right'
               allowDeselect={false}
             />
           </Grid.Col>

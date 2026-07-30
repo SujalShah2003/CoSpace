@@ -7,12 +7,21 @@ import {
   getMemberSpaces,
   getPublicSpaces,
   updateSpace as updateSpaceRequest,
+  type SpaceListFilters,
   type SpaceInput,
 } from '@/services/spaces.api';
 import type { PaginationMeta } from '@/services/apiClient';
 import { getCurrentUser } from '@/utils/auth';
 
-export const useSpaces = (publicOnly = false, pageSize = 50) => {
+export const useSpaces = (
+  publicOnly = false,
+  pageSize = 50,
+  {
+    search = '',
+    minCapacity,
+    type = '',
+  }: SpaceListFilters = {},
+) => {
   const [spaces, setSpaces] = useState<Space[]>([]);
   const [pagination, setPagination] = useState<PaginationMeta | null>(null);
   const [loading, setLoading] = useState(true);
@@ -22,13 +31,14 @@ export const useSpaces = (publicOnly = false, pageSize = 50) => {
   const getPage = useCallback(
     async (page: number) => {
       const user = getCurrentUser();
+      const filters = { search, minCapacity, type };
       return publicOnly
-        ? getPublicSpaces(page, pageSize)
+        ? getPublicSpaces(page, pageSize, undefined, filters)
         : user?.role === 'admin'
-          ? getAdminSpaces(page, pageSize)
-          : getMemberSpaces(page, pageSize);
+          ? getAdminSpaces(page, pageSize, filters)
+          : getMemberSpaces(page, pageSize, filters);
     },
-    [pageSize, publicOnly],
+    [minCapacity, pageSize, publicOnly, search, type],
   );
 
   const refresh = useCallback(async () => {
