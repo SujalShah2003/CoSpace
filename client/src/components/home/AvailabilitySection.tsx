@@ -135,6 +135,7 @@ const AvailabilitySection = ({ spaces }: AvailabilitySectionProps) => {
                     value={selectedSpace?.id ?? null}
                     onChange={setSelectedSpaceId}
                     nothingFoundMessage="No workspaces available"
+                    checkIconPosition='right'
                     size="md"
                     mb="md"
                   />
