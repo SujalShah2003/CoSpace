@@ -107,7 +107,7 @@ export const listSpaces = async ({
   let query = getSupabaseAdmin()
     .from('spaces')
     .select('*', { count: 'exact' })
-    .order('created_at', { ascending: true });
+    .order('created_at', { ascending: false });
 
   if (!includeUnavailable) query = query.eq('status', 'available');
   if (filters.minCapacity) query = query.gte('capacity', filters.minCapacity);

@@ -21,8 +21,7 @@ const AppModal = ({
     onClose={onClose}
     title={title}
     size={size}
-    centered={false}
-    yOffset="5dvh"
+    centered
     radius="md"
     padding="xl"
     overlayProps={{ backgroundOpacity: 0.55, blur: 5 }}

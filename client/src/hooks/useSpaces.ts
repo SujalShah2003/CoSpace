@@ -83,7 +83,7 @@ export const useSpaces = (
 
   const createSpace = async (values: SpaceInput) => {
     const created = await createSpaceRequest(values);
-    setSpaces((current) => [...current, created]);
+    setSpaces((current) => [created, ...current]);
     return created;
   };
   const updateSpace = async (spaceId: string, values: SpaceInput) => {
