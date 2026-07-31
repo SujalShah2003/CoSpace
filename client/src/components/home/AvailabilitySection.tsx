@@ -8,6 +8,7 @@ import {
   Group,
   Paper,
   ScrollArea,
+  Select,
   SimpleGrid,
   Stack,
   Text,
@@ -33,17 +34,37 @@ type AvailabilitySectionProps = { spaces: Space[] };
 
 const AvailabilitySection = ({ spaces }: AvailabilitySectionProps) => {
   const [selectedDate, setSelectedDate] = useState<Date | string | null>(new Date());
+  const [selectedSpaceId, setSelectedSpaceId] = useState<string | null>(
+    spaces[0]?.id ?? null,
+  );
   const [slots, setSlots] = useState<BookingSlot[]>([]);
 
+  const selectedSpace =
+    spaces.find((space) => space.id === selectedSpaceId) ?? spaces[0] ?? null;
+
   useEffect(() => {
-    const firstSpace = spaces[0];
-    if (!firstSpace) return;
+    if (spaces.length === 0) {
+      setSelectedSpaceId(null);
+      return;
+    }
+
+    if (!selectedSpaceId || !spaces.some((space) => space.id === selectedSpaceId)) {
+      setSelectedSpaceId(spaces[0].id);
+    }
+  }, [spaces, selectedSpaceId]);
+
+  useEffect(() => {
+    if (!selectedSpace) {
+      setSlots([]);
+      return;
+    }
+
     void getAvailableSlots(
-      firstSpace.id,
+      selectedSpace.id,
       dayjs(selectedDate).format('YYYY-MM-DD'),
       true,
     ).then(setSlots);
-  }, [selectedDate, spaces]);
+  }, [selectedDate, selectedSpace]);
 
   return (
     <Box
@@ -103,6 +124,21 @@ const AvailabilitySection = ({ spaces }: AvailabilitySectionProps) => {
                 </Badge>
               </Group>
               <Grid>
+                <Grid.Col span={12}>
+                  <Select
+                    label="Workspace"
+                    placeholder="Select a workspace"
+                    data={spaces.map((space) => ({
+                      value: space.id,
+                      label: `${space.name} · ${space.type}`,
+                    }))}
+                    value={selectedSpace?.id ?? null}
+                    onChange={setSelectedSpaceId}
+                    nothingFoundMessage="No workspaces available"
+                    size="md"
+                    mb="md"
+                  />
+                </Grid.Col>
                 <Grid.Col span={{ base: 12, sm: 6 }}>
                   <DatePicker
                     value={selectedDate}
