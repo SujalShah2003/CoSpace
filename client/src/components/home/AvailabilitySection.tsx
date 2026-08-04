@@ -15,6 +15,7 @@ import {
   ThemeIcon,
   Title,
 } from '@mantine/core';
+import { WorkspaceAvailabilitySkeleton } from './LoadingSkeleton';
 import { DatePicker } from '@mantine/dates';
 import { FiCalendar, FiCheckCircle, FiClock, FiLock, FiRefreshCw } from 'react-icons/fi';
 import dayjs from 'dayjs';
@@ -38,6 +39,7 @@ const AvailabilitySection = ({ spaces }: AvailabilitySectionProps) => {
     spaces[0]?.id ?? null,
   );
   const [slots, setSlots] = useState<BookingSlot[]>([]);
+  const [loadingSlots, setLoadingSlots] = useState(true);
 
   const selectedSpace =
     spaces.find((space) => space.id === selectedSpaceId) ?? spaces[0] ?? null;
@@ -56,14 +58,18 @@ const AvailabilitySection = ({ spaces }: AvailabilitySectionProps) => {
   useEffect(() => {
     if (!selectedSpace) {
       setSlots([]);
+      setLoadingSlots(false);
       return;
     }
 
+    setLoadingSlots(true);
     void getAvailableSlots(
       selectedSpace.id,
       dayjs(selectedDate).format('YYYY-MM-DD'),
       true,
-    ).then(setSlots);
+    )
+      .then(setSlots)
+      .finally(() => setLoadingSlots(false));
   }, [selectedDate, selectedSpace]);
 
   return (
@@ -149,62 +155,66 @@ const AvailabilitySection = ({ spaces }: AvailabilitySectionProps) => {
                   />
                 </Grid.Col>
                 <Grid.Col span={{ base: 12, sm: 6 }}>
-                  <Paper
-                    radius="lg"
-                    p="md"
-                    bg="light-dark(var(--mantine-color-teal-0), var(--mantine-color-dark-7))"
-                  >
-                    <Group justify="space-between" mb="md">
-                      <Group gap="xs">
-                        <FiClock />
-                        <Text fw={700}>Open time slots</Text>
+                  {loadingSlots ? (
+                    <WorkspaceAvailabilitySkeleton />
+                  ) : (
+                    <Paper
+                      radius="lg"
+                      p="md"
+                      bg="light-dark(var(--mantine-color-teal-0), var(--mantine-color-dark-7))"
+                    >
+                      <Group justify="space-between" mb="md">
+                        <Group gap="xs">
+                          <FiClock />
+                          <Text fw={700}>Open time slots</Text>
+                        </Group>
+                        <Badge color="teal" variant="light">2 hours each</Badge>
                       </Group>
-                      <Badge color="teal" variant="light">2 hours each</Badge>
-                    </Group>
-                    <ScrollArea.Autosize mah={230} type="auto" offsetScrollbars scrollbarSize={6}>
-                      <SimpleGrid cols={1} spacing="xs">
-                        {allSlots.map((slot) => {
-                          const isAvailable =
-                            slots.find((item) => item.label === slot)?.status ===
-                            'available';
-                          return (
-                            <Button
-                              key={slot}
-                              variant={isAvailable ? 'default' : 'subtle'}
-                              color={isAvailable ? 'teal' : 'gray'}
-                              disabled={!isAvailable}
-                              justify="space-between"
-                              px="sm"
-                              rightSection={
-                                <Badge
-                                  color={isAvailable ? 'teal' : 'red'}
-                                  variant="light"
-                                  size="xs"
-                                  leftSection={isAvailable ? <FiCheckCircle /> : <FiLock />}
-                                >
-                                  {isAvailable ? 'Available' : 'Booked'}
-                                </Badge>
-                              }
-                              styles={{
-                                label: {
-                                  overflow: 'visible',
-                                },
-                                root: !isAvailable
-                                  ? {
-                                      opacity: 1,
-                                      background:
-                                        'light-dark(var(--mantine-color-gray-1), var(--mantine-color-dark-5))',
-                                    }
-                                  : undefined,
-                              }}
-                            >
-                              {slot}
-                            </Button>
-                          );
-                        })}
-                      </SimpleGrid>
-                    </ScrollArea.Autosize>
-                  </Paper>
+                      <ScrollArea.Autosize mah={230} type="auto" offsetScrollbars scrollbarSize={6}>
+                        <SimpleGrid cols={1} spacing="xs">
+                          {allSlots.map((slot) => {
+                            const isAvailable =
+                              slots.find((item) => item.label === slot)?.status ===
+                              'available';
+                            return (
+                              <Button
+                                key={slot}
+                                variant={isAvailable ? 'default' : 'subtle'}
+                                color={isAvailable ? 'teal' : 'gray'}
+                                disabled={!isAvailable}
+                                justify="space-between"
+                                px="sm"
+                                rightSection={
+                                  <Badge
+                                    color={isAvailable ? 'teal' : 'red'}
+                                    variant="light"
+                                    size="xs"
+                                    leftSection={isAvailable ? <FiCheckCircle /> : <FiLock />}
+                                  >
+                                    {isAvailable ? 'Available' : 'Booked'}
+                                  </Badge>
+                                }
+                                styles={{
+                                  label: {
+                                    overflow: 'visible',
+                                  },
+                                  root: !isAvailable
+                                    ? {
+                                        opacity: 1,
+                                        background:
+                                          'light-dark(var(--mantine-color-gray-1), var(--mantine-color-dark-5))',
+                                      }
+                                    : undefined,
+                                }}
+                              >
+                                {slot}
+                              </Button>
+                            );
+                          })}
+                        </SimpleGrid>
+                      </ScrollArea.Autosize>
+                    </Paper>
+                  )}
                 </Grid.Col>
               </Grid>
             </Paper>

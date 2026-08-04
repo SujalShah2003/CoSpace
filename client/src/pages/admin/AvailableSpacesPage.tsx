@@ -33,6 +33,7 @@ import { Link } from "react-router-dom";
 import AdminBreadcrumbs from "@/components/admin/common/AdminBreadcrumbs";
 import SpaceDetailsModal from "@/components/home/SpaceDetailsModal";
 import AppModal from "@/components/modal/AppModal";
+import { SpaceCardsSkeleton } from "@/components/home/LoadingSkeleton";
 import type { Space } from "@/components/home/data.temp";
 import { useSpaces } from "@/hooks/useSpaces";
 import { getCurrentUser } from "@/utils/auth";
@@ -47,6 +48,7 @@ const AvailableSpacesPage = () => {
     deleteSpace,
     hasMore,
     loadMore,
+    loading,
     loadingMore,
   } = useSpaces(false, 6, {
     search: debouncedSearch,
@@ -122,114 +124,118 @@ const AvailableSpacesPage = () => {
         </SimpleGrid>
       </Paper>
 
-      <SimpleGrid cols={{ base: 1, md: 2, xl: 3 }} spacing="xl">
-        {spaces.map((space) => (
-          <Card
-            key={space.id}
-            withBorder
-            radius="xl"
-            padding={0}
-            shadow="xs"
-            style={{ display: "flex", flexDirection: "column" }}
-          >
-            <Card.Section pos="relative">
-              <Image src={space.image} alt={space.name} h={220} fit="cover" />
-              <Badge pos="absolute" top={16} left={16} color="dark">
-                {space.type}
-              </Badge>
-              <Badge
-                pos="absolute"
-                top={16}
-                right={16}
-                color={space.status === "unavailable" ? "gray" : "green"}
-              >
-                {space.status === "unavailable" ? "Unavailable" : "Available"}
-              </Badge>
-            </Card.Section>
-
-            <Stack p="lg" gap="md" style={{ flex: 1 }}>
-              <Group justify="space-between" align="flex-start" wrap="nowrap">
-                <Title order={2} fz="xl">
-                  {space.name}
-                </Title>
-                <Badge color="gray" variant="light" leftSection={<FiUsers />}>
-                  {space.capacity}
+      {loading ? (
+        <SpaceCardsSkeleton count={6} />
+      ) : (
+        <SimpleGrid cols={{ base: 1, md: 2, xl: 3 }} spacing="xl">
+          {spaces.map((space) => (
+            <Card
+              key={space.id}
+              withBorder
+              radius="xl"
+              padding={0}
+              shadow="xs"
+              style={{ display: "flex", flexDirection: "column" }}
+            >
+              <Card.Section pos="relative">
+                <Image src={space.image} alt={space.name} h={220} fit="cover" />
+                <Badge pos="absolute" top={16} left={16} color="dark">
+                  {space.type}
                 </Badge>
-              </Group>
-              <Text c="dimmed" size="sm" lineClamp={2}>
-                {space.description}
-              </Text>
-              <Group gap="xs">
-                {space.amenities.map((amenity) => (
-                  <Badge
-                    key={amenity}
-                    color="gray"
-                    variant="light"
-                    leftSection={<FiCheck />}
-                  >
-                    {amenity}
-                  </Badge>
-                ))}
-              </Group>
+                <Badge
+                  pos="absolute"
+                  top={16}
+                  right={16}
+                  color={space.status === "unavailable" ? "gray" : "green"}
+                >
+                  {space.status === "unavailable" ? "Unavailable" : "Available"}
+                </Badge>
+              </Card.Section>
 
-              <Group gap="sm" mt="auto" wrap="nowrap">
-                {space.status === "unavailable" ? (
-                  <Button
-                    color="teal"
-                    leftSection={<FiCalendar />}
-                    disabled
-                    style={{ flex: 1 }}
-                  >
-                    Book now
-                  </Button>
-                ) : (
-                  <Button
-                    component={Link}
-                    to={`/admin/bookings/new?space=${space.id}`}
-                    color="teal"
-                    leftSection={<FiCalendar />}
-                    style={{ flex: 1 }}
-                  >
-                    Book now
-                  </Button>
-                )}
-                <Tooltip label="View space" withArrow>
-                  <ActionIcon
-                    variant="default"
-                    size={36}
-                    aria-label={`View ${space.name}`}
-                    onClick={() => setSelectedSpace(space)}
-                  >
-                    <FiEye />
-                  </ActionIcon>
-                </Tooltip>
-                {isAdmin && <Tooltip label="Edit space" withArrow>
-                  <ActionIcon
-                    component={Link}
-                    to={`/admin/spaces/${space.id}/edit`}
-                    variant="default"
-                    size={36}
-                    aria-label={`Edit ${space.name}`}
-                  >
-                    <FiEdit2 />
-                  </ActionIcon>
-                </Tooltip>}
-                {isAdmin && <Tooltip label="Delete space" withArrow>
-                  <ActionIcon
-                    variant="light"
-                    color="red"
-                    size={36}
-                    aria-label={`Delete ${space.name}`}
-                    onClick={() => setSpaceToDelete(space)}
-                  >
-                    <FiTrash2 />
-                  </ActionIcon>
-                </Tooltip>}
-              </Group>
-            </Stack>
-          </Card>
-        ))}
-      </SimpleGrid>
+              <Stack p="lg" gap="md" style={{ flex: 1 }}>
+                <Group justify="space-between" align="flex-start" wrap="nowrap">
+                  <Title order={2} fz="xl">
+                    {space.name}
+                  </Title>
+                  <Badge color="gray" variant="light" leftSection={<FiUsers />}>
+                    {space.capacity}
+                  </Badge>
+                </Group>
+                <Text c="dimmed" size="sm" lineClamp={2}>
+                  {space.description}
+                </Text>
+                <Group gap="xs">
+                  {space.amenities.map((amenity) => (
+                    <Badge
+                      key={amenity}
+                      color="gray"
+                      variant="light"
+                      leftSection={<FiCheck />}
+                    >
+                      {amenity}
+                    </Badge>
+                  ))}
+                </Group>
+
+                <Group gap="sm" mt="auto" wrap="nowrap">
+                  {space.status === "unavailable" ? (
+                    <Button
+                      color="teal"
+                      leftSection={<FiCalendar />}
+                      disabled
+                      style={{ flex: 1 }}
+                    >
+                      Book now
+                    </Button>
+                  ) : (
+                    <Button
+                      component={Link}
+                      to={`/admin/bookings/new?space=${space.id}`}
+                      color="teal"
+                      leftSection={<FiCalendar />}
+                      style={{ flex: 1 }}
+                    >
+                      Book now
+                    </Button>
+                  )}
+                  <Tooltip label="View space" withArrow>
+                    <ActionIcon
+                      variant="default"
+                      size={36}
+                      aria-label={`View ${space.name}`}
+                      onClick={() => setSelectedSpace(space)}
+                    >
+                      <FiEye />
+                    </ActionIcon>
+                  </Tooltip>
+                  {isAdmin && <Tooltip label="Edit space" withArrow>
+                    <ActionIcon
+                      component={Link}
+                      to={`/admin/spaces/${space.id}/edit`}
+                      variant="default"
+                      size={36}
+                      aria-label={`Edit ${space.name}`}
+                    >
+                      <FiEdit2 />
+                    </ActionIcon>
+                  </Tooltip>}
+                  {isAdmin && <Tooltip label="Delete space" withArrow>
+                    <ActionIcon
+                      variant="light"
+                      color="red"
+                      size={36}
+                      aria-label={`Delete ${space.name}`}
+                      onClick={() => setSpaceToDelete(space)}
+                    >
+                      <FiTrash2 />
+                    </ActionIcon>
+                  </Tooltip>}
+                </Group>
+              </Stack>
+            </Card>
+          ))}
+        </SimpleGrid>
+      )}
 
       {hasMore && (
         <Group justify="center">

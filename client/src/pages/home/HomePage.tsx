@@ -21,6 +21,7 @@ const HomePage = () => {
     spaces,
     hasMore,
     loadMore,
+    loading,
     loadingMore,
   } = useSpaces(true, 6, {
     search: debouncedQuery,
@@ -72,6 +73,7 @@ const HomePage = () => {
         onViewDetails={setSelectedSpace}
         onBook={handleBook}
         hasMore={hasMore}
+        loading={loading}
         loadingMore={loadingMore}
         onLoadMore={() => void loadMore()}
       />

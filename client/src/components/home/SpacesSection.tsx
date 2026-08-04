@@ -18,6 +18,7 @@ import { FiCalendar, FiCheck, FiEye, FiSearch, FiUsers } from 'react-icons/fi';
 import type { Space } from './data.temp';
 import { homeText } from './data.temp';
 import SectionHeading from './SectionHeading';
+import { SpaceCardsSkeleton } from './LoadingSkeleton';
 
 type SpacesSectionProps = {
   spaces: Space[];
@@ -26,6 +27,7 @@ type SpacesSectionProps = {
   onBook: (space: Space) => void;
   hasMore: boolean;
   loadingMore: boolean;
+  loading: boolean;
   onLoadMore: () => void;
 };
 
@@ -36,6 +38,7 @@ const SpacesSection = ({
   onBook,
   hasMore,
   loadingMore,
+  loading,
   onLoadMore,
 }: SpacesSectionProps) => (
   <Box component="section" id="spaces" py={{ base: 64, sm: 96 }}>
@@ -49,7 +52,9 @@ const SpacesSection = ({
         <Badge size="lg" variant="outline" color="gray">{spaces.length} spaces</Badge>
       </Group>
 
-      {spaces.length > 0 ? (
+      {loading ? (
+        <SpaceCardsSkeleton />
+      ) : spaces.length > 0 ? (
         <Stack gap="xl">
           <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }} spacing="xl">
             {spaces.map((space) => (

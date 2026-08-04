@@ -1,12 +1,30 @@
 # CoSpace Booking
 
-CoSpace contains a React/Vite client and a modular Express API written in strict
-TypeScript. Users, spaces, bookings, refresh sessions, and workspace image
-metadata are persisted in Supabase; image bytes are stored in Supabase Storage.
+CoSpace Booking is a full-stack workspace reservation application with:
+- A React + Vite frontend in `client/`
+- A TypeScript Express API backend in `server/`
+- Supabase-powered persistence for users, bookings, spaces, sessions, and images
 
-## Run locally
+The client and server are separate packages with their own dependency sets and scripts.
 
-Open two terminals:
+## Tech stack
+
+- Frontend: React 19, Vite, TypeScript, Mantine UI, React Router 8
+- Backend: Express 5, TypeScript, Supabase JS, JWT auth, bcryptjs
+- Database: Supabase PostgreSQL
+- Storage: Supabase Storage (`space-images` bucket)
+
+## Project structure
+
+- `client/` — React app and frontend assets
+- `server/` — Express API, config, routes, services, middleware, and Supabase setup
+- `render.yaml` — Render blueprint for deploying the API and static site
+- `server/supabase/migrations/001_initial_schema.sql` — initial DB schema
+- `server/scripts/seed-admin.ts` — seed administrator account
+
+## Local development
+
+Open two terminals and start the server and client separately:
 
 ```bash
 cd server
@@ -20,69 +38,57 @@ npm install
 npm run dev
 ```
 
-The client runs at `http://localhost:5173` and calls the API at
-`http://localhost:4000/api`. Copy the provided `.env.example` files if different
-ports or origins are needed.
+- Frontend: `http://localhost:5173`
+- Backend: `http://localhost:4000`
+
+The frontend expects the API at `http://localhost:4000/api` by default. If you change ports or origins, update `server/.env` and the client `VITE_API_URL` as needed.
+
+## Environment configuration
+
+Copy `server/.env.example` to `server/.env` and set the required values.
+
+Required server variables:
+- `PORT` — default `4000`
+- `CLIENT_ORIGIN` — comma-separated list of allowed origins, default `http://localhost:5173`
+- `JWT_ACCESS_SECRET` — server-side JWT access secret
+- `JWT_REFRESH_SECRET` — server-side JWT refresh secret
+- `ACCESS_TOKEN_EXPIRES_IN` — access token lifetime in seconds (`900` default)
+- `REFRESH_TOKEN_EXPIRES_IN` — refresh token lifetime in seconds (`604800` default)
+- `SUPABASE_URL` — Supabase project URL
+- `SUPABASE_PUBLISHABLE_KEY` — Supabase publishable key
+- `SUPABASE_SECRET_KEY` — Supabase service role secret key
+- `SUPABASE_JWKS_URL` — Supabase JWKS endpoint
+- `SUPABASE_STORAGE_BUCKET` — Supabase storage bucket name, default `space-images`
+
+Optional admin seed variables:
+- `ADMIN_EMAIL`
+- `ADMIN_PASSWORD`
+- `ADMIN_NAME`
+
+> Do not expose `SUPABASE_SECRET_KEY` in the client. Keep it server-only.
 
 ## Supabase setup
 
-The server includes `@supabase/server`, `@supabase/supabase-js`, typed server
-client configuration, and an initial PostgreSQL/Storage migration.
-
-1. Put the unredacted `sb_secret_...` value in `server/.env`. Never expose this
-   value through the client.
-2. Open the Supabase SQL Editor and run
-   `server/supabase/migrations/001_initial_schema.sql`.
-3. Seed the administrator:
+1. Create a Supabase project.
+2. Copy `server/.env.example` to `server/.env` and fill in your Supabase values.
+3. In the Supabase SQL editor, run `server/supabase/migrations/001_initial_schema.sql`.
+4. Seed the initial admin user:
 
 ```bash
 cd server
 npm run db:seed
 ```
 
-The migration creates `users`, `spaces`, `bookings`, and `refresh_sessions`,
-plus a public `space-images` Storage bucket restricted to JPG, PNG, and WebP
-files up to 5 MB. Workspace rows store both `image_url` and `image_path`; the
-actual image bytes belong in Supabase Storage.
-
-Seeded administrator:
-
+Default seeded admin values in `server/.env.example`:
 - Email: `admin@cospace.com`
 - Password: `Admin@123`
+- Name: `CoSpace Admin`
 
-Every account created through registration receives the `member` role. The
-server does not accept a role from the registration payload.
+The schema includes `users`, `spaces`, `bookings`, `refresh_sessions`, and support for workspace image metadata and Supabase Storage.
 
-The migration is only required once per Supabase project. Run it again only
-when a new migration file is added; rerunning the seed is safe and adds missing
-spaces/images without duplicating them.
+## API overview
 
-## Deploy on Render
-
-The root `render.yaml` deploys the Express API as a Node web service and the
-React application as a static site. Create a Render Blueprint from this
-repository, then enter these prompted values:
-
-- API `SUPABASE_URL`: your Supabase project URL
-- API `SUPABASE_SECRET_KEY`: the unredacted server secret key
-- API `CLIENT_ORIGIN`: the final Render static-site origin, for example
-  `https://cospace-web.onrender.com`
-- Web `VITE_API_URL`: the final API URL with `/api`, for example
-  `https://cospace-api.onrender.com/api`
-
-`JWT_ACCESS_SECRET` and `JWT_REFRESH_SECRET` are generated by Render. Do not put
-the Supabase secret key in the client or commit it to Git. Because Vite embeds
-environment variables during its build, redeploy the static site after setting
-or changing `VITE_API_URL`.
-
-The database and Storage bucket live in Supabase, so Render restarts and
-horizontal scaling do not erase application data. The initial migration and
-seed must already have been run against the same Supabase project used by the
-Render API.
-
-## API routes
-
-Public:
+### Public routes
 
 - `GET /api/health`
 - `GET /api/public/spaces?date=YYYY-MM-DD`
@@ -92,16 +98,16 @@ Public:
 - `POST /api/auth/refresh`
 - `POST /api/auth/logout`
 
-Authenticated member (administrators may also access these):
+### Authenticated member routes
 
 - `GET /api/member/spaces`
 - `GET /api/member/spaces/:spaceId/slots?date=YYYY-MM-DD`
 - `GET /api/member/bookings`
-- `POST /api/member/bookings` — creates a direct confirmed booking
-- `POST /api/member/booking-requests` — creates a pending request
+- `POST /api/member/bookings`
+- `POST /api/member/booking-requests`
 - `PATCH /api/member/bookings/:bookingId/cancel`
 
-Administrator:
+### Administrator routes
 
 - `GET /api/admin/spaces`
 - `POST /api/admin/spaces`
@@ -109,95 +115,74 @@ Administrator:
 - `DELETE /api/admin/spaces/:spaceId`
 - `GET /api/admin/spaces/:spaceId/slots?date=YYYY-MM-DD`
 - `GET /api/admin/booking-requests`
-- `PATCH /api/admin/booking-requests/:bookingId` with
-  `{ "status": "approved" }` or `{ "status": "rejected" }`
+- `PATCH /api/admin/booking-requests/:bookingId`
 
-Authenticated requests use `Authorization: Bearer <token>`.
+Authenticated endpoints require `Authorization: Bearer <token>`.
 
-List endpoints support server-side pagination:
+## Pagination and filters
 
-```text
-GET /api/public/spaces?page=1&pageSize=12
-GET /api/member/spaces?page=1&pageSize=12
-GET /api/admin/spaces?page=1&pageSize=12
-GET /api/member/bookings?page=1&pageSize=10
-GET /api/admin/booking-requests?page=1&pageSize=10
-```
+List endpoints support pagination using `page` and `pageSize` query parameters.
+Responses include a `pagination` object with:
+- `page`
+- `pageSize`
+- `total`
+- `totalPages`
+- `hasNextPage`
+- `hasPreviousPage`
 
-Paginated responses include a `pagination` object containing `page`,
-`pageSize`, `total`, `totalPages`, `hasNextPage`, and `hasPreviousPage`.
-Space list endpoints also accept API-side filters:
+Space list endpoints also support filters like:
 
 ```text
 ?search=meeting&minCapacity=6&type=Meeting%20Room
 ```
 
-## Authentication tokens
+## Authentication behavior
 
-Registration and login return a 15-minute access token and a 7-day refresh
-token. Both durations can be configured in seconds through
-`ACCESS_TOKEN_EXPIRES_IN` and `REFRESH_TOKEN_EXPIRES_IN`.
+- `register` and `login` return an access token valid for 15 minutes and a refresh token valid for 7 days.
+- `ACCESS_TOKEN_EXPIRES_IN` and `REFRESH_TOKEN_EXPIRES_IN` are configurable in seconds.
+- `POST /api/auth/refresh` rotates refresh tokens and returns a new token pair.
+- `POST /api/auth/logout` revokes the active refresh token.
 
-```json
-{
-  "success": true,
-  "statusCode": 200,
-  "message": "Login successful.",
-  "data": {
-    "user": {
-      "id": "admin-1",
-      "name": "CoSpace Admin",
-      "email": "admin@cospace.com",
-      "role": "admin",
-      "createdAt": "2026-07-30T00:00:00.000Z"
-    },
-    "tokens": {
-      "accessToken": "<jwt>",
-      "refreshToken": "<jwt>",
-      "tokenType": "Bearer",
-      "accessTokenExpiresIn": 900,
-      "refreshTokenExpiresIn": 604800,
-      "accessTokenExpiresAt": "2026-07-30T12:15:00.000Z",
-      "refreshTokenExpiresAt": "2026-08-06T12:00:00.000Z"
-    }
-  },
-  "timestamp": "2026-07-30T12:00:00.000Z"
-}
-```
+## Deployment with Render
 
-Refresh a session with:
+The repository includes `render.yaml` for Render deployment:
+- `cospace-api` runs the backend from `server/`
+- `cospace-web` serves the frontend as a static site from `client/`
 
-```json
-POST /api/auth/refresh
-{
-  "refreshToken": "<jwt>"
-}
-```
+Render environment variables:
+- `CLIENT_ORIGIN` — allowed frontend origin
+- `JWT_ACCESS_SECRET` — generated by Render
+- `JWT_REFRESH_SECRET` — generated by Render
+- `ACCESS_TOKEN_EXPIRES_IN`
+- `REFRESH_TOKEN_EXPIRES_IN`
+- `SUPABASE_URL`
+- `SUPABASE_SECRET_KEY`
+- `SUPABASE_STORAGE_BUCKET`
+- `VITE_API_URL`
 
-Refresh tokens are rotated. After a successful refresh, the previous refresh
-token is revoked and the client must store the new token pair. Logout accepts
-the same body and revokes the active refresh token.
+> Redeploy the frontend after setting or changing `VITE_API_URL` because Vite embeds env vars at build time.
 
-## Response format
+## Scripts
 
-All successful API responses use:
+### Server
+- `npm run dev` — start dev server with `tsx watch`
+- `npm run build` — compile TypeScript to `dist`
+- `npm run start` — run built server
+- `npm run typecheck` — run TypeScript type checks and tests
+- `npm run db:seed` — seed the administrator account
 
-```json
-{
-  "success": true,
-  "statusCode": 200,
-  "message": "Operation completed successfully.",
-  "data": {},
-  "timestamp": "2026-07-30T12:00:00.000Z"
-}
-```
+### Client
+- `npm run dev` — start Vite development server
+- `npm run build` — build production frontend
+- `npm run lint` — run ESLint
+- `npm run preview` — preview built frontend locally
 
-All error responses use:
+## Notes
 
-```json
-{
-  "success": false,
-  "statusCode": 400,
+- The backend is built for Node 20+.
+- The frontend is a private Vite package using React 19.
+- Supabase Storage is used for image asset hosting; metadata is stored in the database.
+
   "message": "Description of the error.",
   "errors": null,
   "timestamp": "2026-07-30T12:00:00.000Z"
