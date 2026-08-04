@@ -58,7 +58,7 @@ export const WorkspaceAvailabilitySkeleton = () => (
 
     <Stack gap="sm">
       {Array.from({ length: 5 }, (_, index) => (
-        <Skeleton key={index} height={52} radius="lg" />
+        <Skeleton key={index} height={30} radius="lg" />
       ))}
     </Stack>
   </Paper>
